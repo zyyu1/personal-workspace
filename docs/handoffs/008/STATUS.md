@@ -5,7 +5,7 @@
 - **Design:** APPROVED / DESIGN FROZEN (confirmed 2026-11-21)
 - **Design Source:** `docs/handoffs/008/DESIGN_APPROVED.md`
 - **Execution Instruction:** `docs/handoffs/008/EXECUTION_INSTRUCTION.md`
-- **Implementation:** **IMPLEMENTED / PR CANDIDATE PREPARED** on `codex/module-008`; implementation commit `f5c5b003fe979eb5d253f075f660c771ee2c928a`. Awaiting independent Review Only QA and Design Window disposition; not merged.
+- **Implementation:** **IMPLEMENTED / PR #18 OPEN** on `codex/module-008`; implementation commit `f5c5b003fe979eb5d253f075f660c771ee2c928a`. Awaiting independent Review Only QA and Design Window disposition; not merged.
 - **QA:** PENDING — developer self-check is not acceptance. See `QA_HANDOFF.md`.
 - **Prerequisite:** **FULFILLED** — Module 007 code accepted at `1c35753804e6b99f2dc620756e4a8dce70f7292c`, PR #15 MERGED `cd2c7145b2a27a7b7e2815b9ad4eea53a6416b08`, native Windows folder-picker Rev03 independently ACCEPTED, matrix **24/24 PASS**, Issue #16 CLOSED. Accepted actual 007 interface map documented in `MODULE_008_START_AUTHORIZATION.md`.
 - **Shared Platform Baseline:** `dc829a9f69d2a31c1b3b3eb2429fe0124cc9d237` (A01 gate; NOT a substitute for 007 implementation baseline)

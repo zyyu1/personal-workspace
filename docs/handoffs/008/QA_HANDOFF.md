@@ -5,7 +5,7 @@
 - Branch: `codex/module-008`
 - Accepted Module 007 / start baseline: `5e2849ec4e4ba0147ab8ab5051d442717171ec19`
 - Implementation commit: `f5c5b003fe979eb5d253f075f660c771ee2c928a`
-- Pull request: to be recorded after publication
+- Pull request: https://github.com/zyyu1/personal-workspace/pull/18
 - QA mode: **Review Only**. Do not modify this branch or merge the PR.
 
 ## Scope implemented
