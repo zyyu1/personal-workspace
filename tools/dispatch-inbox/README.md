@@ -164,6 +164,38 @@ py -3.13 tools/dispatch-inbox/b2_notify.py --notify-once --enable-notifications
 
 See `B2A_OSS_REUSE_REVIEW.md` for the verified reuse decision and `docs/dispatch/B2_DESIGN_APPROVED.md` for the frozen security model.
 
+## B2B V1.1 on-demand receiver (source only)
+
+`b2_on_demand.py` is a short-lived, operator-started receiver. It is not a
+watcher. Each invocation requires both `--receive-once` and
+`--consent-notification`, performs one bounded discovery snapshot and—only for
+one candidate—one fresh authorization snapshot while holding the existing
+single-instance lock. The fresh snapshot must identify the exact same strict
+v2 authorization before the shared Outbox may record `PREPARED`.
+
+The persisted B2 configuration must remain `dispatch_enabled: false`. The
+receiver creates an invocation-scoped in-memory consent copy and never writes
+the configuration. Zero candidates returns `NO_ACTION`; multiple candidates,
+authorization changes, expiry, cancellation, lock/state/network errors return
+`BLOCKED`; a queue process success returns `QUEUE_SUBMITTED (NOT ACK)`.
+
+The repository contains only the inert source template
+`windows/Receive-PersonalWorkspaceTask.ps1.template`. It has absolute-path
+placeholders, accepts no arguments and invokes the finite receiver with fixed
+flags. **Do not run, substitute, copy to the Desktop, register or install this
+template without a new host authorization.** A future approved operator setup
+must pin the absolute Python executable and repository root, preserve the
+existing local Outbox, and create only a normal-user foreground shortcut.
+
+Disable/cleanup is simply not clicking the future shortcut and removing only
+that separately installed shortcut. Never delete the Outbox as part of
+cleanup: `PREPARED`, `QUEUE_SUBMITTED` and `UNKNOWN_DELIVERY` are safety
+records. There is no service, scheduled task, startup entry, daemon, listener,
+retry loop, inbound port or GitHub write capability to disable.
+
+Development and code QA use injected fake senders only. **LIVE QUEUE NOT RUN /
+LOCAL SHORTCUT NOT INSTALLED / B3 NOT AUTHORIZED / MODULE 007–008 NOT STARTED.**
+
 ## Tests
 
 ```powershell

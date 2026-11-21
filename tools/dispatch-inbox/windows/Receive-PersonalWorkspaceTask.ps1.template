@@ -1,0 +1,26 @@
+# INERT SOURCE TEMPLATE — DO NOT RUN OR INSTALL WITHOUT SEPARATE HOST APPROVAL.
+# Replace both placeholders only during a future, separately authorized setup.
+# This script accepts no arguments and starts one finite foreground receiver.
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+
+$PythonExecutable = '<ABSOLUTE_PYTHON_EXE>'
+$RepositoryRoot = '<ABSOLUTE_PERSONAL_WORKSPACE_ROOT>'
+$ReceiverScript = Join-Path $RepositoryRoot 'tools\dispatch-inbox\b2_on_demand.py'
+
+if (-not [System.IO.Path]::IsPathFullyQualified($PythonExecutable)) {
+    throw 'Python executable must be an absolute pinned path.'
+}
+if (-not [System.IO.Path]::IsPathFullyQualified($RepositoryRoot)) {
+    throw 'Repository root must be an absolute pinned path.'
+}
+
+Push-Location -LiteralPath $RepositoryRoot
+try {
+    & $PythonExecutable $ReceiverScript '--receive-once' '--consent-notification'
+    exit $LASTEXITCODE
+}
+finally {
+    Pop-Location
+}
