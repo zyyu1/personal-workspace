@@ -13,7 +13,7 @@ export function AppShell({ children, inspector, timer }: { children: ReactNode; 
   return <div className="app-shell">
     <aside className={`sidebar ${mobileNav ? 'is-open' : ''}`} aria-label="Global navigation">
       <div className="brand"><span className="brand-mark">P</span><span>Personal Workspace</span></div>
-      <nav>{navigation.map(([Icon, label]) => {const enabled=label==='Research'||label==='Resources',active=label==='Resources'?location.pathname==='/resources':location.pathname.startsWith('/research');return <button className={active?'nav-item active':'nav-item'} key={label} disabled={!enabled} title={!enabled?'Not implemented in this increment':label} aria-current={active?'page':undefined} onClick={()=>{navigate(label==='Resources'?'/resources':'/research/projects/adaptive-agents/overview');setMobileNav(false)}}><Icon size={18}/><span>{label}</span></button>})}</nav>
+      <nav>{navigation.map(([Icon, label]) => {const enabled=['Research','Resources','Calendar'].includes(label),active=label==='Resources'?location.pathname==='/resources':label==='Calendar'?location.pathname==='/calendar':label==='Research'?location.pathname.startsWith('/research'):false;return <button className={active?'nav-item active':'nav-item'} key={label} disabled={!enabled} title={!enabled?'Not implemented in this increment':label} aria-current={active?'page':undefined} onClick={()=>{navigate(label==='Resources'?'/resources':label==='Calendar'?'/calendar':'/research/projects/adaptive-agents/overview');setMobileNav(false)}}><Icon size={18}/><span>{label}</span></button>})}</nav>
       {location.pathname.startsWith('/research')&&<div className="research-shortcuts"><span>Research</span><button className={location.pathname==='/research/venues'?'active':''} onClick={()=>{navigate('/research/venues');setMobileNav(false)}}>Venue Explorer</button><button className={location.pathname.includes('/submissions')?'active':''} onClick={()=>{navigate('/research/projects/adaptive-agents/submissions');setMobileNav(false)}}>Submissions</button></div>}
       <div className="sidebar-foot"><span className="status-dot"/>Demo data · local-first</div>
     </aside>
@@ -33,13 +33,14 @@ export function AppShell({ children, inspector, timer }: { children: ReactNode; 
   </div>
 }
 
-export function MiniTimer({ running, label, seconds, onToggle, onStop }: { running: boolean; label?: string; seconds: number; onToggle: () => void; onStop: () => void }) {
+export function MiniTimer({ running, label, seconds, busy, onToggle, onFinish, onDiscard }: { running?: boolean; label?: string; seconds: number; busy?:boolean; onToggle: () => void; onFinish: () => void; onDiscard:()=>void }) {
   const mm = String(Math.floor(seconds / 60)).padStart(2, '0')
   const ss = String(seconds % 60).padStart(2, '0')
   return <div className={`mini-timer ${running ? 'running' : ''}`}>
     <div><span className="eyebrow">Focus timer</span><strong>{label ?? 'No active task'}</strong></div>
     <time>{mm}:{ss}</time>
-    <button className="timer-toggle" onClick={onToggle} disabled={!label}><Clock3 size={16}/>{running ? 'Pause' : 'Start'}</button>
-    {seconds > 0 && <button className="timer-stop" onClick={onStop}>Finish</button>}
+    <button className="timer-toggle" onClick={onToggle} disabled={!label||busy}><Clock3 size={16}/>{!label?'Start':running?'Pause':'Resume'}</button>
+    {label&&<button className="timer-stop" onClick={onFinish} disabled={busy}>Finish & save</button>}
+    {label&&<button className="timer-discard" onClick={onDiscard} disabled={busy}>Discard</button>}
   </div>
 }

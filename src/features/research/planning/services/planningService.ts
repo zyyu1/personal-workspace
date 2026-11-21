@@ -3,6 +3,7 @@ import type { ResearchTask, TimeEntry } from '../../types'
 import type { FixedCalendarEvent, PlanningSnapshot, ResearchMilestone, ResearchStage, ReviewRow } from '../types'
 import { SubmissionService } from '../../submissions/services/submissionService'
 import { createVersionedRepository, notFoundFailure, stableId, unwrapMutation } from '../../../../data/persistence'
+import { TimeEntryService } from '../../../../services/timeEntryService'
 
 const initialStages:ResearchStage[]=[
   {id:'s1',projectId:'adaptive-agents',name:'Literature review',order:1,status:'completed',startDate:'2026-10-01',endDate:'2026-11-10'},
@@ -26,8 +27,8 @@ const entries:TimeEntry[]=[
   {id:'e4',projectId:'adaptive-agents',taskId:'t3',stageId:'s1',date:'2026-11-21',minutes:34},
 ]
 const copy=<T>(value:T):T=>structuredClone(value)
-interface PlanningState{stages:ResearchStage[];milestones:ResearchMilestone[];timeEntries:TimeEntry[]}
-const repository=createVersionedRepository<PlanningState>({domain:'planning',schemaVersion:1,seedVersion:1,seed:()=>copy({stages:initialStages,milestones:initialMilestones,timeEntries:entries})})
+interface PlanningState{stages:ResearchStage[];milestones:ResearchMilestone[];legacyTimeEntries:TimeEntry[]}
+const repository=createVersionedRepository<PlanningState>({domain:'planning',schemaVersion:2,seedVersion:1,seed:()=>copy({stages:initialStages,milestones:initialMilestones,legacyTimeEntries:entries}),migrate:(data,fromVersion)=>{if(fromVersion!==1)throw new Error(`Unsupported planning schema ${fromVersion}`);const legacy=data as {stages:ResearchStage[];milestones:ResearchMilestone[];timeEntries?:TimeEntry[];legacyTimeEntries?:TimeEntry[]};return{stages:legacy.stages,milestones:legacy.milestones,legacyTimeEntries:legacy.legacyTimeEntries??legacy.timeEntries??[]}}})
 const duration=(start:string,end:string)=>Math.max(0,(new Date(end).getTime()-new Date(start).getTime())/60000)
 
 export const PlanningService={
@@ -36,7 +37,8 @@ export const PlanningService={
     const submissionData=await SubmissionService.getSnapshot(projectId),opportunityIds=new Set(submissionData.targets.map(target=>target.opportunityId))
     const canonicalDeadlines:FixedCalendarEvent[]=submissionData.deadlines.filter(deadline=>opportunityIds.has(deadline.opportunityId)&&deadline.utcInstant&&deadline.calendarItemId).map(deadline=>{const opportunity=submissionData.opportunities.find(item=>item.id===deadline.opportunityId),venue=submissionData.venues.find(item=>item.id===opportunity?.venueId),source=submissionData.evidence.find(item=>item.id===deadline.evidenceId);return{id:deadline.calendarItemId!,projectId,title:`${venue?.canonicalName} · ${deadline.eventType} (Demo)`,start:deadline.utcInstant!,end:deadline.utcInstant!,kind:'submission-deadline',timezone:deadline.originalTimezone,verification:deadline.verificationStatus==='verified'?'verified':'unverified',sourceUrl:source?.url}})
     const state=await repository.getState()
-    return {demoData:true,offline:false,tasks:await GlobalTaskService.list(projectId),stages:copy(state.stages.filter(stage=>stage.projectId===projectId).sort((a,b)=>a.order-b.order)),milestones:copy(state.milestones.filter(item=>item.projectId===projectId)),events:copy([...events.filter(item=>item.projectId===projectId),...canonicalDeadlines]),timeEntries:copy(state.timeEntries.filter(item=>item.projectId===projectId))}
+    if(state.legacyTimeEntries.length){await TimeEntryService.importLegacy(state.legacyTimeEntries);unwrapMutation(await repository.mutate(current=>({state:{...current,legacyTimeEntries:[]},value:true})))}
+    return {demoData:true,offline:false,tasks:await GlobalTaskService.list(projectId),stages:copy(state.stages.filter(stage=>stage.projectId===projectId).sort((a,b)=>a.order-b.order)),milestones:copy(state.milestones.filter(item=>item.projectId===projectId)),events:copy([...events.filter(item=>item.projectId===projectId),...canonicalDeadlines]),timeEntries:await TimeEntryService.list(projectId)}
   },
   createTask:GlobalTaskService.create.bind(GlobalTaskService),
   updateTask:GlobalTaskService.update.bind(GlobalTaskService),
@@ -58,6 +60,6 @@ export const PlanningService={
   reviewByDate(snapshot:PlanningSnapshot):ReviewRow[]{
     const rows=new Map<string,ReviewRow>();for(const task of snapshot.tasks)for(const item of task.plannedSessions??[]){const date=item.start.slice(0,10);const row=rows.get(date)??{key:date,label:date,plannedMinutes:0,actualMinutes:0};row.plannedMinutes+=duration(item.start,item.end);rows.set(date,row)}for(const item of new Map(snapshot.timeEntries.map(entry=>[entry.id,entry])).values()){const row=rows.get(item.date)??{key:item.date,label:item.date,plannedMinutes:0,actualMinutes:0};row.actualMinutes+=item.minutes;rows.set(item.date,row)}return[...rows.values()].sort((a,b)=>a.key.localeCompare(b.key))
   },
-  async reset(){await repository.reset();await GlobalTaskService.reset()},
+  async reset(){await repository.reset();await GlobalTaskService.reset();await TimeEntryService.reset()},
   invalidate(){repository.invalidate()},
 }

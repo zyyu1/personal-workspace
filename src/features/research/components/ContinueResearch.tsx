@@ -13,6 +13,6 @@ export function ContinueResearch({ context, onInspect, onResume }: { context: Co
   return <SectionCard className="continue-card" eyebrow="Return to context" title="Continue research" action={<button className="primary-button" onClick={onResume} disabled={!context.lastTask}><Play size={16}/> Resume</button>}>
     {context.lastTask ? <div className="resume-focus"><div className="resume-icon"><CheckCircle2/></div><div><span className="eyebrow">Last active task</span><button className="text-button resume-title" onClick={() => onInspect({kind:'task', data:context.lastTask!})}>{context.lastTask.title}</button><p>{context.nextAction}</p></div></div> : <div className="empty-state"><h3>No resumable context yet</h3><p>{context.nextAction}</p></div>}
     <div className="context-grid">{resources.map(({icon:Icon,label,state,onClick}) => <button className="context-item" key={label} onClick={onClick} disabled={label.startsWith('No ')}><span className="context-icon"><Icon size={18}/></span><span><strong>{label}</strong><small>{state}</small></span>{state === 'Available' || state === 'connected' ? <ExternalLink size={15}/> : <span className="state-indicator"/>}</button>)}</div>
-    <p className="context-note">Resume restores this Workspace context only. It does not recreate an editor cursor or external application runtime.</p>
+    <p className="context-note">Resume restores this Workspace context only and never starts the timer. It does not recreate an editor cursor or external application runtime.</p>
   </SectionCard>
 }

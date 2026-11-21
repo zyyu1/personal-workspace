@@ -53,7 +53,7 @@ export interface ProjectMilestone {
   stageId?: string
 }
 
-export interface TimeEntry { id:string; projectId:string; taskId?:string; stageId?:string; date:string; minutes:number }
+export interface TimeEntry { id:string; projectId:string; taskId?:string; stageId?:string; paperId?:string; experimentId?:string; timerSessionId?:string; startedAt?:string; endedAt?:string; durationSeconds?:number; date:string; minutes:number }
 
 export interface ContinueContext {
   lastTask?: ResearchTask

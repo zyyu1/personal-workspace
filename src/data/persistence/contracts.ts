@@ -1,4 +1,4 @@
-export type RepositoryDomain='tasks'|'resources'|'literature'|'planning'|'experiments'|'submissions'
+export type RepositoryDomain='tasks'|'resources'|'literature'|'planning'|'experiments'|'submissions'|'time-entries'|'timer-sessions'|'resume-contexts'
 
 export interface StoredEnvelope<T>{
   domain:RepositoryDomain
@@ -41,6 +41,7 @@ export interface LiteratureRepository<T> extends RepositoryContract<T>{readonly 
 export interface PlanningRepository<T> extends RepositoryContract<T>{readonly domain:'planning'}
 export interface ExperimentRepositoryContract<T> extends RepositoryContract<T>{readonly domain:'experiments'}
 export interface SubmissionRepository<T> extends RepositoryContract<T>{readonly domain:'submissions'}
+export interface TimeEntryRepository<T> extends RepositoryContract<T>{readonly domain:'time-entries'}
 
 export type MutationErrorCode='persistence-unavailable'|'migration-failed'|'validation-failed'|'not-found'|'unknown'
 export interface MutationFailure{code:MutationErrorCode;message:string;cause?:unknown;retryable:boolean}
