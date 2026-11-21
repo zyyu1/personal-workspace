@@ -2,6 +2,12 @@ export type IntegrationState = 'connected' | 'disconnected' | 'unavailable'
 export type TaskStatus = 'todo' | 'in-progress' | 'blocked' | 'done'
 export type Priority = 'high' | 'medium' | 'low'
 export type StageState = 'complete' | 'current' | 'upcoming'
+export type TaskType = 'reading' | 'experiment' | 'writing' | 'analysis' | 'general'
+
+export interface DailyTaskAssignment { id:string; taskId:string; projectId:string; date:string }
+export interface PlannedSession { id:string; taskId:string; projectId:string; start:string; end:string }
+export interface TaskDependency { id:string; taskId:string; dependsOnTaskId:string }
+export interface TaskResourceLink { id:string; label:string; kind:'file'|'note'|'repository'; available:boolean }
 
 export interface ResearchTask {
   id: string
@@ -10,6 +16,13 @@ export interface ResearchTask {
   stage: string
   dueDate?: string
   priority?: Priority
+  projectId?: string
+  taskType?: TaskType
+  paperIds?: string[]
+  resourceLinks?: TaskResourceLink[]
+  dependencies?: TaskDependency[]
+  dailyAssignments?: DailyTaskAssignment[]
+  plannedSessions?: PlannedSession[]
 }
 
 export interface LiteratureItem {
@@ -37,7 +50,10 @@ export interface ProjectMilestone {
   timezone?: string
   verification?: 'verified' | 'unverified' | 'internal'
   sourceUrl?: string
+  stageId?: string
 }
+
+export interface TimeEntry { id:string; projectId:string; taskId?:string; stageId?:string; date:string; minutes:number }
 
 export interface ContinueContext {
   lastTask?: ResearchTask

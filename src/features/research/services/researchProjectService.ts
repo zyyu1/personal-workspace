@@ -1,4 +1,5 @@
 import type { ResearchProject } from '../types'
+import { GlobalTaskService } from '../../../services/globalTaskService'
 
 // Isolated adapter: replace this implementation with API calls without changing UI contracts.
 const demoProject: ResearchProject = {
@@ -62,6 +63,7 @@ const emptyProject: ResearchProject = {
 export const ResearchProjectService = {
   async getProject(projectId: string): Promise<ResearchProject> {
     await new Promise((resolve) => setTimeout(resolve, 160))
-    return projectId === 'empty-project' ? emptyProject : demoProject
+    if (projectId === 'empty-project') return emptyProject
+    return {...demoProject,tasks:await GlobalTaskService.list(projectId)}
   },
 }

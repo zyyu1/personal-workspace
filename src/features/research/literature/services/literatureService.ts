@@ -1,6 +1,7 @@
 import type { Priority, ResearchTask } from '../../types'
 import { DisconnectedZoteroConnector } from './zoteroConnector'
 import { paperStableId, type LiteraturePaper, type LiteratureSnapshot, type ReadingStatus } from '../types'
+import { GlobalTaskService } from '../../../../services/globalTaskService'
 
 const sharedPaper = (overrides: Partial<LiteraturePaper> & Pick<LiteraturePaper, 'itemKey' | 'title'>): LiteraturePaper => ({
   stableId: paperStableId('demo-library', overrides.itemKey), libraryId: 'demo-library', authors: [],
@@ -48,10 +49,8 @@ export const LiteratureService = {
   async createReadingTask(stableId:string, projectId:string): Promise<ResearchTask> {
     const paper = papers.find(p => p.stableId === stableId)
     if (!paper) throw new Error('Paper not found')
-    const existing = paper.relatedTasks.find(t => t.title === `Read: ${paper.title}`)
-    if (existing) return existing
-    const task:ResearchTask = {id:`task-${paper.itemKey}`,title:`Read: ${paper.title}`,status:'todo',stage:'Literature review',priority:'medium'}
-    papers = papers.map(p => p.stableId === stableId ? {...p,relatedTasks:[...p.relatedTasks,task]} : p)
+    const task=await GlobalTaskService.createReadingTask(projectId,stableId,paper.title)
+    if(!paper.relatedTasks.some(item=>item.id===task.id))papers = papers.map(p => p.stableId === stableId ? {...p,relatedTasks:[...p.relatedTasks,task]} : p)
     await this.updateProjectState(stableId,projectId,{readingStatus:'to-read'})
     return task
   },
@@ -59,5 +58,5 @@ export const LiteratureService = {
     papers = papers.map(p => { if(p.stableId!==stableId)return p; const states={...p.projectStates}; delete states[projectId]; return {...p,projectStates:states,relatedProjects:p.relatedProjects.filter(project=>project.id!==projectId)} })
     return papers.find(p => p.stableId === stableId)!
   },
-  reset() { papers = structuredClone(initialPapers) },
+  reset() { papers = structuredClone(initialPapers); GlobalTaskService.reset() },
 }

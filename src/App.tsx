@@ -1,11 +1,13 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Navigate, Route, Routes, useParams, useSearchParams } from 'react-router-dom'
+import { Navigate, Route, Routes, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { AppShell, MiniTimer } from './components/AppShell'
 import { Inspector, type InspectorItem } from './components/Inspector'
 import { ProjectHeader } from './features/research/components/ProjectHeader'
 import { ResearchTabs } from './features/research/components/ResearchTabs'
 import { LiteratureLibrary } from './features/research/literature/components/LiteratureLibrary'
 import { ResearchOverview } from './features/research/pages/ResearchOverview'
+import { ResearchTasks } from './features/research/planning/components/ResearchTasks'
+import { ResearchTimeline } from './features/research/planning/components/ResearchTimeline'
 import { ResearchProjectService } from './features/research/services/researchProjectService'
 import type { ResearchProject, ResearchTask } from './features/research/types'
 
@@ -14,17 +16,20 @@ interface TimerControls { timer:ReactNode; start:(label:string)=>void }
 function ProjectPage({timerControls}:{timerControls:TimerControls}) {
   const {projectId='adaptive-agents',section='overview'}=useParams()
   const [searchParams,setSearchParams]=useSearchParams()
+  const navigate=useNavigate()
   const [project,setProject]=useState<ResearchProject>()
   const [inspector,setInspector]=useState<InspectorItem>()
-  useEffect(()=>{setProject(undefined);setInspector(undefined);ResearchProjectService.getProject(projectId).then(setProject)},[projectId])
+  useEffect(()=>{setProject(undefined);setInspector(undefined);ResearchProjectService.getProject(projectId).then(setProject)},[projectId,section])
   if(!project)return <AppShell timer={timerControls.timer}><div className="loading-page"><span className="loading-line wide"/><span className="loading-line"/><div className="loading-grid"><span/><span/><span/></div></div></AppShell>
   const startTask=(task?:ResearchTask)=>{if(task)timerControls.start(task.title)}
   const inspectorPanel=inspector?<Inspector item={inspector} onClose={()=>setInspector(undefined)} onStartTimer={startTask}/>:undefined
   const selectedPaperId=searchParams.get('paper')??undefined
+  const selectedTaskId=searchParams.get('task')??undefined
   const setSelectedPaper=(id?:string)=>{const next=new URLSearchParams(searchParams);id?next.set('paper',id):next.delete('paper');setSearchParams(next,{replace:true})}
+  const setSelectedTask=(id?:string)=>{const next=new URLSearchParams(searchParams);id?next.set('task',id):next.delete('task');setSearchParams(next,{replace:true})}
   return <AppShell inspector={section==='overview'?inspectorPanel:undefined} timer={timerControls.timer}>
     <ProjectHeader project={project} onFocus={startTask}/><ResearchTabs projectId={project.id}/>
-    {section==='overview'?<ResearchOverview project={project} onInspect={setInspector} onResume={startTask}/>:section==='literature'?<LiteratureLibrary projectId={project.id} selectedPaperId={selectedPaperId} onSelectPaper={setSelectedPaper} onStartTimer={timerControls.start}/>:<div className="placeholder-page"><span className="eyebrow">Planned module</span><h2>{section[0].toUpperCase()+section.slice(1)}</h2><p>This route is ready, but the module is intentionally outside the current increments.</p><button className="secondary-button" disabled>Not implemented in this increment</button></div>}
+    {section==='overview'?<ResearchOverview project={project} onInspect={setInspector} onResume={startTask}/>:section==='literature'?<LiteratureLibrary projectId={project.id} selectedPaperId={selectedPaperId} onSelectPaper={setSelectedPaper} onStartTimer={timerControls.start}/>:section==='tasks'?<ResearchTasks projectId={project.id} selectedTaskId={selectedTaskId} onSelectTask={setSelectedTask} onStartTimer={timerControls.start}/>:section==='timeline'?<ResearchTimeline projectId={project.id} onOpenTask={taskId=>navigate(`/research/projects/${project.id}/tasks?task=${encodeURIComponent(taskId)}`)}/>:<div className="placeholder-page"><span className="eyebrow">Planned module</span><h2>{section[0].toUpperCase()+section.slice(1)}</h2><p>This route is ready, but the module is intentionally outside the current increments.</p><button className="secondary-button" disabled>Not implemented in this increment</button></div>}
   </AppShell>
 }
 
