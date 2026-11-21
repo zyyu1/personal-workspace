@@ -6,8 +6,8 @@
 - **A01 Final Integration Gate:** READY FOR MODULE 007
 - **Baseline:** `dc829a9f69d2a31c1b3b3eb2429fe0124cc9d237`
 - **Implementation:** **MERGED INTO `main` / CODE ACCEPTED** — PR #15 merge `cd2c7145b2a27a7b7e2815b9ad4eea53a6416b08`; accepted source HEAD `1c35753804e6b99f2dc620756e4a8dce70f7292c`, doc-only reconciled HEAD `35dd5e9417a2e711cd659c9b85b953a75f4f865f`.
-- **QA:** **ACCEPTED FOR CODE** at `1c35753804e6b99f2dc620756e4a8dce70f7292c` — 23 PASS / 0 FAIL / 1 PARTIAL (real Windows directory picker host verification), independent QA https://github.com/zyyu1/personal-workspace/pull/15#issuecomment-7065966274
-- **Next Action:** Module 007 code delivery complete. **Host acceptance gate #4 remains PARTIAL**, tracked at Issue #16; do not claim Windows folder picker PASS until a separately authorized real-host verification. Module 008 implementation requires a new explicit Design Window decision; no B2B/B3/Queue.
+- **QA:** **FINAL ACCEPTED / 24 PASS / 0 PARTIAL / 0 FAIL** — code QA anchor `1c35753804e6b99f2dc620756e4a8dce70f7292c` (https://github.com/zyyu1/personal-workspace/pull/15#issuecomment-7065966274); genuine Windows folder-picker host QA accepted Revision 03 (https://github.com/zyyu1/personal-workspace/issues/16#issuecomment-7068768746).
+- **Next Action:** Module 007 **CLOSED / MERGED / FINAL ACCEPTED**; proceed to separate Module 008 frozen-design/actual-interfaces gate and explicit development authorization. No automatic B2B/B3/Queue activation.
 - **Document Sync:** COMPLETE
 
 The historical Audit waiting statement in the Approved Design remains part of the frozen source and has not been edited. The final gate above and the formal Execution Instruction record that the implementation restriction has been lifted. Implementation remains NOT STARTED until the Development Window receives the separate start instruction.
@@ -74,3 +74,14 @@ The historical REJECTED candidate and Remediation authorization above remain pre
 - **Current matrix:** **23 PASS / 0 FAIL / 1 PARTIAL**. #4 is **HOST VERIFICATION PENDING**; Issue #16 OPEN. Not 24/24 PASS.
 - **Independent QA required:** Revision 03 real Windows grant → preview → Confirm index only → canonical CourseOffering Resource/Entry/Inspector → same-session IndexedDB reload → unchanged 3-file SHA256; full operator report and independent Review Only evidence before Design Window acceptance/Issue closure.
 - **Module 007 app code:** remains independent QA ACCEPTED/MERGED; test helper is documentation/test-only, NOT application feature code. **Module 008 NOT STARTED**, B2B paused, B3/Codex Queue unauthorized.
+
+## Module 007 Final Acceptance — Rev03 Windows Host QA PASS (2026-11-21; CURRENT AUTHORITY)
+
+- **Design Window final decision:** https://github.com/zyyu1/personal-workspace/issues/16#issuecomment-7068768746 — matrix #4 **PASS** on the defined actual Windows native directory-picker/manual grant/index-only workflow; overall **24 PASS / 0 PARTIAL / 0 FAIL**. The historical code-only matrix 23/0/1 was correct at its earlier timestamp and must remain preserved above.
+- **Operator Revision 03 report:** https://github.com/zyyu1/personal-workspace/issues/16#issuecomment-7068575041 — Windows 10 Pro/Chrome 157 Incognito, `main` HEAD `8355709d505ed1630018c4a15ea2144255a8e69e` with accepted merge ancestor; atomic checked-out `.ps1` blob `1ec4b87886dce64e1704942c4f0ac82f6b301b7b`; genuine human-granted safe Documents child; three safe relative paths, explicit Confirm index only, three canonical Resources, Inspector, same-private-window IndexedDB reload, 3/3 SHA256 unchanged; Vite shutdown and Git clean.
+- **Independent host QA:** https://github.com/zyyu1/personal-workspace/issues/16#issuecomment-7068589496 — **ACCEPTED**, recommends matrix #4 PASS. Evidence limitation: post-grant Inspector/refresh details were *operator-attested*, not independently captured DOM; screenshots optional in authority and not claimed. Cancel/deny/expiry/unsupported scenarios remain **NOT VERIFIED**, not implicitly PASS.
+- **Historical findings preserved:** Rev01 `%TEMP%` Chrome security refusal; Rev02 independently REJECTED misattribution of valid repository regex and corrected JS-to-PowerShell escape/interactive queue; Rev03 is separate successful native workflow. No source edits, Local Connector or lasting filesystem grants were asserted.
+- **Issue #16:** complete and approved for closure. **Module 007:** `PR #15 MERGED`, accepted implementation `1c35753804e6b99f2dc620756e4a8dce70f7292c`, merge commit `cd2c7145b2a27a7b7e2815b9ad4eea53a6416b08`; **FINAL ACCEPTED / CLOSED**.
+- **Module 008:** the upstream QA/merge prerequisite is fulfilled, but an actual-domain-interface gate and **separate explicit Design Window 008 implementation authorization** remain necessary. Module 008 has not been started as part of this acceptance. B2B paused; B3 and real Codex Queue remain unauthorized.
+
+This final decision supersedes prior point-in-time PARTIAL/merge-hold text without erasing any historical original QA outcomes.
