@@ -7,7 +7,7 @@ export type TaskType = 'reading' | 'experiment' | 'writing' | 'analysis' | 'gene
 export interface DailyTaskAssignment { id:string; taskId:string; projectId:string; date:string }
 export interface PlannedSession { id:string; taskId:string; projectId:string; start:string; end:string }
 export interface TaskDependency { id:string; taskId:string; dependsOnTaskId:string }
-export interface TaskResourceLink { id:string; label:string; kind:'file'|'note'|'repository'; available:boolean }
+export interface TaskResourceLink { id:string; resourceId?:string; label:string; kind:'file'|'note'|'repository'; available:boolean }
 
 export interface ResearchTask {
   id: string

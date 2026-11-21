@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { BookOpen, BriefcaseBusiness, CalendarDays, CheckSquare, Clock3, FolderKanban, LayoutDashboard, Menu, Search, X } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 const navigation = [
   [LayoutDashboard, 'Dashboard'], [BookOpen, 'Study'], [FolderKanban, 'Research'],
@@ -8,10 +9,11 @@ const navigation = [
 
 export function AppShell({ children, inspector, timer }: { children: ReactNode; inspector?: ReactNode; timer: ReactNode }) {
   const [mobileNav, setMobileNav] = useState(false)
+  const location=useLocation(),navigate=useNavigate()
   return <div className="app-shell">
     <aside className={`sidebar ${mobileNav ? 'is-open' : ''}`} aria-label="Global navigation">
       <div className="brand"><span className="brand-mark">P</span><span>Personal Workspace</span></div>
-      <nav>{navigation.map(([Icon, label]) => <button className={label === 'Research' ? 'nav-item active' : 'nav-item'} key={label} disabled={label !== 'Research'} title={label !== 'Research' ? 'Not implemented in this increment' : 'Current area'} aria-current={label === 'Research' ? 'page' : undefined}><Icon size={18}/><span>{label}</span></button>)}</nav>
+      <nav>{navigation.map(([Icon, label]) => {const enabled=label==='Research'||label==='Resources',active=label==='Resources'?location.pathname==='/resources':location.pathname.startsWith('/research');return <button className={active?'nav-item active':'nav-item'} key={label} disabled={!enabled} title={!enabled?'Not implemented in this increment':label} aria-current={active?'page':undefined} onClick={()=>{navigate(label==='Resources'?'/resources':'/research/projects/adaptive-agents/overview');setMobileNav(false)}}><Icon size={18}/><span>{label}</span></button>})}</nav>
       <div className="sidebar-foot"><span className="status-dot"/>Demo data · local-first</div>
     </aside>
     {mobileNav && <button className="scrim" aria-label="Close navigation" onClick={() => setMobileNav(false)}/>} 
