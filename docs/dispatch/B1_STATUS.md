@@ -21,7 +21,7 @@
 - **Test Evidence:** B1 40/40 PASS, existing 104/104 PASS; typecheck/build/compile PASS; lint 0 errors and 12 historical warnings
 - **Windows Host Verification:** **PASS (2026-11-21, Revision 02; B1 OPERATIONAL GATE ACCEPTED)** — Windows 10 Pro, Python 3.13.2, preferred encoding `cp936`, official GitHub CLI `2.105.0`, authenticated private GET PASS. One controlled real `--once --dry-run --no-receipts` poll exited **0**, ordinary Issue #4 classified `REJECTED_UNTRUSTED / APPROVAL_LABEL_MISSING` as expected; working tree clean, no encoding workaround, no receipts, Codex calls, poller GitHub writes or service. Evidence: https://github.com/zyyu1/personal-workspace/issues/4#issuecomment-7063375466; Design Window acceptance: https://github.com/zyyu1/personal-workspace/issues/4#issuecomment-7063391810. Previous Revision 01 host FAIL is preserved in Issue #4 history.
 - **B1 Automatic Operation:** NOT ENABLED — code merger does not install, schedule or run a listener on Windows
-- **B2:** BLOCKED / NOT AUTHORIZED — B1 host smoke passed, but future automatic dispatch requires separate user/design approval, full delivery/retry/ACK security design, independent implementation QA and real-host verification.
+- **B2:** DESIGN APPROVED (2026-11-21) — scoped **B2A CODE-ONLY development and independent QA** authorized via `docs/dispatch/B2A_EXECUTION_INSTRUCTION.md`. **Real Codex queue delivery, B2B unattended polling and all B3 implementation routing remain BLOCKED / NOT AUTHORIZED** until separate gates. Current authoritative status: `docs/dispatch/B2_STATUS.md`.
 - **B3:** BLOCKED — requires additional authorization and actual authenticated delivery/ACK controls
 - **Module 007:** Existing independent implementation QA acceptance not recorded by this B1 activity; no Module 007 code work authorized by B1
 - **Module 008:** NOT STARTED / BLOCKED BY MODULE 007 independently QA-accepted implementation
@@ -50,3 +50,7 @@
 - **Operator report:** https://github.com/zyyu1/personal-workspace/issues/4#issuecomment-7063375466
 - **Design Window final approval:** https://github.com/zyyu1/personal-workspace/issues/4#issuecomment-7063391810
 - **Scope:** Acceptance of the operator-invoked **B1 read-only classifier only**. Continuous watching, approved live task ingestion, automated Codex delivery, acknowledgement/retry and B2/B3 remain unimplemented and unauthorized.
+
+## Forward Phase Note — B2 Design Approved (2026-11-21)
+
+B1 operational PASS remains unchanged. The user subsequently approved B2 notification-only design V1.0. The formal frozen design is `docs/dispatch/B2_DESIGN_APPROVED.md`; development **only** of disabled-by-default supervised B2A code is now authorized on a separate branch, pending independent QA. This note does not authorize a live queue message or unattended listener. See `docs/dispatch/B2_STATUS.md` and GitHub Issue #8.
