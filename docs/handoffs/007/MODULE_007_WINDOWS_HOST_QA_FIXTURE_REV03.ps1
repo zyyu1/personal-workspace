@@ -34,7 +34,7 @@ if (-not [string]::Equals($expectedFull, $canonicalFull, [StringComparison]::Ord
     throw 'STOP: Windows Documents is redirected or differs from the approved local path'
 }
 # Check path components without regex or literal backslashes (immune to double-escaping).
-$pathComponents = $expectedFull.Split([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar)
+$pathComponents = $expectedFull.Split([char[]]@([IO.Path]::DirectorySeparatorChar, [IO.Path]::AltDirectorySeparatorChar))
 $deniedComponents = @('onedrive','dropbox','sharepoint','appdata','temp','windows','program files','program files (x86)')
 foreach ($component in $pathComponents) {
     if ($deniedComponents -contains $component.ToLowerInvariant()) {
