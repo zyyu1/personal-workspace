@@ -8,6 +8,8 @@ import { LiteratureLibrary } from './features/research/literature/components/Lit
 import { ResearchOverview } from './features/research/pages/ResearchOverview'
 import { ResearchTasks } from './features/research/planning/components/ResearchTasks'
 import { ResearchTimeline } from './features/research/planning/components/ResearchTimeline'
+import { ExperimentsWorkspace } from './features/research/experiments/components/ExperimentsWorkspace'
+import { ExperimentRepository } from './features/research/experiments/services/experimentRepository'
 import { ResearchProjectService } from './features/research/services/researchProjectService'
 import type { ResearchProject, ResearchTask } from './features/research/types'
 
@@ -15,6 +17,7 @@ interface TimerControls { timer:ReactNode; start:(label:string)=>void }
 
 function ProjectPage({timerControls}:{timerControls:TimerControls}) {
   const {projectId='adaptive-agents',section='overview'}=useParams()
+  const experimentSubpath=useParams()['*']
   const [searchParams,setSearchParams]=useSearchParams()
   const navigate=useNavigate()
   const [project,setProject]=useState<ResearchProject>()
@@ -29,7 +32,7 @@ function ProjectPage({timerControls}:{timerControls:TimerControls}) {
   const setSelectedTask=(id?:string)=>{const next=new URLSearchParams(searchParams);id?next.set('task',id):next.delete('task');setSearchParams(next,{replace:true})}
   return <AppShell inspector={section==='overview'?inspectorPanel:undefined} timer={timerControls.timer}>
     <ProjectHeader project={project} onFocus={startTask}/><ResearchTabs projectId={project.id}/>
-    {section==='overview'?<ResearchOverview project={project} onInspect={setInspector} onResume={startTask}/>:section==='literature'?<LiteratureLibrary projectId={project.id} selectedPaperId={selectedPaperId} onSelectPaper={setSelectedPaper} onStartTimer={timerControls.start}/>:section==='tasks'?<ResearchTasks projectId={project.id} selectedTaskId={selectedTaskId} onSelectTask={setSelectedTask} onStartTimer={timerControls.start}/>:section==='timeline'?<ResearchTimeline projectId={project.id} onOpenTask={taskId=>navigate(`/research/projects/${project.id}/tasks?task=${encodeURIComponent(taskId)}`)}/>:<div className="placeholder-page"><span className="eyebrow">Planned module</span><h2>{section[0].toUpperCase()+section.slice(1)}</h2><p>This route is ready, but the module is intentionally outside the current increments.</p><button className="secondary-button" disabled>Not implemented in this increment</button></div>}
+    {section==='overview'?<ResearchOverview project={project} onInspect={setInspector} onResume={startTask}/>:section==='literature'?<LiteratureLibrary projectId={project.id} selectedPaperId={selectedPaperId} onSelectPaper={setSelectedPaper} onStartTimer={timerControls.start} onCreateExperiment={async paper=>{const item=await ExperimentRepository.createFromPaper(project.id,paper.stableId,paper.title);navigate(`/research/projects/${project.id}/experiments/${item.id}`)}}/>:section==='tasks'?<ResearchTasks projectId={project.id} selectedTaskId={selectedTaskId} onSelectTask={setSelectedTask} onStartTimer={timerControls.start}/>:section==='timeline'?<ResearchTimeline projectId={project.id} onOpenTask={taskId=>navigate(`/research/projects/${project.id}/tasks?task=${encodeURIComponent(taskId)}`)}/>:section==='experiments'?<ExperimentsWorkspace projectId={project.id} subpath={experimentSubpath}/>:<div className="placeholder-page"><span className="eyebrow">Planned module</span><h2>{section[0].toUpperCase()+section.slice(1)}</h2><p>This route is ready, but the module is intentionally outside the current increments.</p><button className="secondary-button" disabled>Not implemented in this increment</button></div>}
   </AppShell>
 }
 
@@ -50,5 +53,5 @@ export function App() {
   const stop=()=>{setActiveLabel(undefined);setRunning(false);setSeconds(0)}
   const timer=<MiniTimer running={running} label={activeLabel} seconds={seconds} onToggle={()=>activeLabel&&setRunning(!running)} onStop={stop}/>
   const timerControls={timer,start}
-  return <><Routes><Route path="/research/projects/:projectId/:section" element={<ProjectPage timerControls={timerControls}/>}/><Route path="/research/literature" element={<GlobalLiteraturePage timerControls={timerControls}/>}/><Route path="*" element={<Navigate to="/research/projects/adaptive-agents/overview" replace/>}/></Routes>{pendingLabel&&<div className="modal-backdrop"><div className="switch-timer-dialog" role="dialog" aria-modal="true" aria-labelledby="switch-timer-title"><span className="eyebrow">One timer at a time</span><h2 id="switch-timer-title">Switch active timer?</h2><p>Finish the current entry for <strong>{activeLabel}</strong> and start <strong>{pendingLabel}</strong>.</p><div><button className="secondary-button" onClick={()=>setPendingLabel(undefined)}>Keep current</button><button className="primary-button" onClick={()=>{setActiveLabel(pendingLabel);setSeconds(0);setRunning(true);setPendingLabel(undefined)}}>Switch timer</button></div></div></div>}</>
+  return <><Routes><Route path="/research/projects/:projectId/:section/*" element={<ProjectPage timerControls={timerControls}/>}/><Route path="/research/literature" element={<GlobalLiteraturePage timerControls={timerControls}/>}/><Route path="*" element={<Navigate to="/research/projects/adaptive-agents/overview" replace/>}/></Routes>{pendingLabel&&<div className="modal-backdrop"><div className="switch-timer-dialog" role="dialog" aria-modal="true" aria-labelledby="switch-timer-title"><span className="eyebrow">One timer at a time</span><h2 id="switch-timer-title">Switch active timer?</h2><p>Finish the current entry for <strong>{activeLabel}</strong> and start <strong>{pendingLabel}</strong>.</p><div><button className="secondary-button" onClick={()=>setPendingLabel(undefined)}>Keep current</button><button className="primary-button" onClick={()=>{setActiveLabel(pendingLabel);setSeconds(0);setRunning(true);setPendingLabel(undefined)}}>Switch timer</button></div></div></div>}</>
 }

@@ -11,7 +11,7 @@ import { PaperInspector } from './PaperInspector'
 
 const defaults:LiteratureFilters={query:'',collectionId:'all',readingStatus:'all',year:'all',priority:'all',pdfAvailability:'all',tag:'all'}
 
-export function LiteratureLibrary({projectId,selectedPaperId,onSelectPaper,onStartTimer}:{projectId?:string;selectedPaperId?:string;onSelectPaper:(id?:string)=>void;onStartTimer:(label:string)=>void}) {
+export function LiteratureLibrary({projectId,selectedPaperId,onSelectPaper,onStartTimer,onCreateExperiment}:{projectId?:string;selectedPaperId?:string;onSelectPaper:(id?:string)=>void;onStartTimer:(label:string)=>void;onCreateExperiment?:(paper:LiteraturePaper)=>Promise<void>}) {
   const [snapshot,setSnapshot]=useState<LiteratureSnapshot>()
   const [filters,setFilters]=useState(defaults)
   const [collapsed,setCollapsed]=useState(false)
@@ -51,6 +51,6 @@ export function LiteratureLibrary({projectId,selectedPaperId,onSelectPaper,onSta
       <LiteratureToolbar filters={filters} onChange={setFilters} onClear={()=>setFilters({...defaults,collectionId:filters.collectionId})} availableYears={years} tags={tags}/>
       {papers.length?<><PaperTable papers={papers} projectId={projectId} selectedId={selectedPaperId} onSelect={selectPaper}/><PaperCards papers={papers} projectId={projectId} selectedId={selectedPaperId} onSelect={selectPaper}/></>:<div className="library-state empty"><Library/><h2>{emptyCollection?'This collection is empty':'No papers match'}</h2><p>{emptyCollection?'Items added to this Zotero collection will appear after a read-only sync.':'Adjust or clear search and filter criteria.'}</p>{!emptyCollection&&<button className="secondary-button" onClick={()=>setFilters({...defaults,collectionId:filters.collectionId})}>Clear filters</button>}</div>}
     </div>
-    {selected&&<PaperInspector paper={selected} projectId={projectId} onClose={closeInspector} onStartTimer={onStartTimer} onUpdate={async values=>refreshPaper(await LiteratureService.updateProjectState(selected.stableId,projectId!,values))} onCreateTask={async()=>{await LiteratureService.createReadingTask(selected.stableId,projectId!);const fresh=await LiteratureService.getSnapshot();setSnapshot(fresh)}} onUnlink={async()=>{refreshPaper(await LiteratureService.unlinkProject(selected.stableId,projectId!));closeInspector()}}/>}
+    {selected&&<PaperInspector paper={selected} projectId={projectId} onClose={closeInspector} onStartTimer={onStartTimer} onCreateExperiment={onCreateExperiment?()=>onCreateExperiment(selected):undefined} onUpdate={async values=>refreshPaper(await LiteratureService.updateProjectState(selected.stableId,projectId!,values))} onCreateTask={async()=>{await LiteratureService.createReadingTask(selected.stableId,projectId!);const fresh=await LiteratureService.getSnapshot();setSnapshot(fresh)}} onUnlink={async()=>{refreshPaper(await LiteratureService.unlinkProject(selected.stableId,projectId!));closeInspector()}}/>}
   </div>
 }

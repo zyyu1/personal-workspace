@@ -7,6 +7,7 @@ import { RecentLiterature } from '../components/RecentLiterature'
 import { ResearchRoadmap } from '../components/ResearchRoadmap'
 import { TimeInvestment } from '../components/TimeInvestment'
 import { UpcomingMilestones } from '../components/UpcomingMilestones'
+import { RecentExperiment } from '../experiments/components/RecentExperiment'
 
 export function ResearchOverview({ project, onInspect, onResume }: { project: ResearchProject; onInspect: (item: InspectorItem) => void; onResume: (task?: ResearchTask) => void }) {
   return <div className="overview-grid">
@@ -14,6 +15,7 @@ export function ResearchOverview({ project, onInspect, onResume }: { project: Re
     <ProjectProgress stages={project.stages} currentStage={project.currentStage}/>
     <NextActions tasks={project.tasks} onOpen={(data) => onInspect({kind:'task',data})}/>
     <RecentLiterature items={project.literature} onOpen={(data) => onInspect({kind:'paper',data})}/>
+    <RecentExperiment projectId={project.id}/>
     <TimeInvestment entries={project.timeEntries}/>
     <ResearchRoadmap stages={project.stages}/>
     <UpcomingMilestones milestones={project.milestones}/>

@@ -5,10 +5,10 @@ import type { LiteraturePaper, ReadingStatus } from '../types'
 
 type EditableStatus = Exclude<ReadingStatus,'not-tracked'>
 
-export function PaperInspector({paper,projectId,onClose,onUpdate,onCreateTask,onStartTimer,onUnlink}:{
+export function PaperInspector({paper,projectId,onClose,onUpdate,onCreateTask,onCreateExperiment,onStartTimer,onUnlink}:{
   paper:LiteraturePaper; projectId?:string; onClose:()=>void;
   onUpdate:(values:{readingStatus?:EditableStatus;priority?:Priority;note?:string})=>Promise<void>;
-  onCreateTask:()=>Promise<void>; onStartTimer:(label:string)=>void; onUnlink:()=>Promise<void>;
+  onCreateTask:()=>Promise<void>; onCreateExperiment?:()=>Promise<void>; onStartTimer:(label:string)=>void; onUnlink:()=>Promise<void>;
 }) {
   const state=projectId?paper.projectStates[projectId]:undefined
   const [note,setNote]=useState(state?.note??'')
@@ -29,6 +29,7 @@ export function PaperInspector({paper,projectId,onClose,onUpdate,onCreateTask,on
       <button className="secondary-button" disabled={!pdf?.url} title={paper.pdfAvailability==='windows-only'?'Available only on Research-PC':paper.pdfAvailability==='missing'?'No PDF attachment found':'No browser-accessible PDF'}><MonitorDown/> {paper.pdfAvailability==='windows-only'?'PDF on Windows':paper.pdfAvailability==='missing'?'PDF missing':'Open PDF'}</button>
       <button className="secondary-button" disabled={!markdown} onClick={()=>setNoteOpen(true)}><NotebookPen/> {markdown?'Open note':'No note'}</button>
       <button className="secondary-button" disabled={!projectId||taskCreated} onClick={async()=>{await onCreateTask();setTaskCreated(true)}}><Plus/> {taskCreated?'Task created':'Create task'}</button>
+      <button className="secondary-button" disabled={!projectId||!onCreateExperiment} onClick={()=>void onCreateExperiment?.()}><FilePlus2/> Create experiment</button>
       <button className="primary-button" onClick={()=>onStartTimer(`Reading · ${paper.title}`)}><Clock3/> Start timer</button>
     </div></section>
     <section className="inspector-section" id="paper-note"><h3>Related notes</h3>{projectId?<><textarea className="paper-note" aria-label="Project research note" value={note} onChange={e=>setNote(e.target.value)} onBlur={()=>{if(note!==state?.note)save({note})}} placeholder="Add a note for this project…"/>{noteOpen&&markdown&&<div className="resource-callout"><FileText/><span><strong>{markdown.label}</strong><small>Workspace preview · source file unchanged</small></span></div>}</>:<p className="muted">Project notes require project context.</p>}</section>
