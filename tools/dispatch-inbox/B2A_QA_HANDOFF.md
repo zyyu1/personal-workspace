@@ -5,13 +5,36 @@
 - Repository: `zyyu1/personal-workspace`
 - Work order: [Issue #8](https://github.com/zyyu1/personal-workspace/issues/8)
 - Authority: `docs/dispatch/B2A_EXECUTION_INSTRUCTION.md`
+- Revision authority: `docs/dispatch/B2A_REMEDIATION_REV01.md` on `main`
 - Frozen design: `docs/dispatch/B2_DESIGN_APPROVED.md`
 - Branch: `codex/dispatch-b2a`
 - Accepted base: `6bd25582484f4d751c471328beac276f05e9bdc6`
 - Implementation commit: `ed3a588a4a84c6ea569d51afb206c70894c96e09`
+- Rejected candidate: `0d37e2ff038b23ce390f4bcff8ee3e3182076ce4`
+- Original independent QA: **REJECTED**, [B2A-QA-001 evidence](https://github.com/zyyu1/personal-workspace/pull/9#issuecomment-7063918022)
+- Revision 01 remediation commit: `7ed48ce7cb33608c8f57cbbb0f73ed01cf0983a2`
 - Review mode: independent QA, review only; do not modify the candidate
 
-The final candidate HEAD is the branch tip containing this handoff and is recorded in the PR. The implementation commit above is immutable and contains all executable code, tests, fixtures and runbook changes.
+The final Revision 01 candidate HEAD is the branch tip containing this updated handoff and is recorded in the PR. The original implementation and rejected QA history remain unchanged; the remediation commit contains only the authorized strict-type fix, adversarial tests and B2A runbook clarification.
+
+## Revision 01 finding and fix
+
+Original QA reproduced a High fail-open caused by Python numeric equality: `True == 1`, `2.0 == 2` and `8001.0 == 8001`. The rejected candidate incorrectly authorized Issue/Record values `schema_version: 2.0`, `notification_authorized: 1`, `notification_template_version: true` and `issue_number: 8001.0`.
+
+Revision 01 adds explicit, audit-friendly field type maps at `b2_notify.py:86-116`, validates outer Issue identity at `342-376`, applies Issue types before any envelope comparison at `385`, applies Record types before any record comparison at `430`, and requires `record["notification_authorized"] is True` at `431`. Local config version and all config scalar fields now use exact types at `204-235`. No value is coerced with `int()`, `str()` or `bool()`.
+
+| Input | Exact type contract before value checks |
+| --- | --- |
+| Issue envelope integers | `schema_version`: `type(value) is int` |
+| Issue envelope strings | dispatch ID, mode, module, repo, both paths, both SHAs, creator and expiry: `type(value) is str` |
+| Issue envelope approval | `requires_human_approval`: `type(value) is bool` and `is False` |
+| Outer Issue identity | positive `number`: exact `int`; repository/state/login: exact `str`; labels reject non-string names |
+| Record integers | schema version, Issue number and template version: exact `int` |
+| Record authorization | exact `bool` and `is True` |
+| Record strings | dispatch ID, mode, module, repo, scope, handoff path/SHA, expiry, nonce and creator: exact `str` |
+| Local config | version exact integer `1`; flags exact `bool`; identity/UUID/executable exact `str` |
+
+The five original attacks and adjacent bool/int/float/string/null substitutions are SHA-consistent test inputs. Every rejected input asserts: no `AuthorizedNotification`, zero fake sender calls and no PREPARED/outbox file. Canonical values still produce `AUTHORIZED_NOTIFICATION`; `mode=implement` remains forbidden.
 
 ## Scope and changed files
 
@@ -21,6 +44,8 @@ The final candidate HEAD is the branch tip containing this handoff and is record
 - `tools/dispatch-inbox/README.md` — default-off configuration, operation, disable and removal guidance.
 - `tools/dispatch-inbox/B2A_OSS_REUSE_REVIEW.md` — current required three-project reuse review.
 - This handoff.
+
+Revision 01 changes only `b2_notify.py`, `test_b2_notify.py`, the B2A section of `README.md`, and this handoff.
 
 There are no changes to `src/`, B1 executable semantics, frozen designs, Module 007/008 handoffs or status files, services, schedulers, startup configuration, repository labels or GitHub authorization records.
 
@@ -41,7 +66,7 @@ There are no changes to `src/`, B1 executable semantics, frozen designs, Module 
 
 | Command/check | Result |
 | --- | --- |
-| `py -3.13 -m unittest discover -s tools/dispatch-inbox/tests -v` | PASS — 76/76; includes all prior 47 B1 tests and 29 B2A tests |
+| `py -3.13 -m unittest discover -s tools/dispatch-inbox/tests -v` | PASS — 85/85; includes all prior 47 B1 tests and 38 B2A tests |
 | `py -3.13 -m py_compile tools/dispatch-inbox/dispatch_inbox.py tools/dispatch-inbox/b2_notify.py tools/dispatch-inbox/tests/test_dispatch_inbox.py tools/dispatch-inbox/tests/test_b2_notify.py` | PASS, exit 0 |
 | Default `py -3.13 tools/dispatch-inbox/b2_notify.py` | PASS — blocked before config/queue with `EXPLICIT_NOTIFY_OPT_IN_REQUIRED`, exit 64 |
 | `npm run typecheck` | PASS, exit 0 |
@@ -61,7 +86,7 @@ All sender tests inject fake runners. The only real Codex command used during pr
 | 2 | PASS | `probe`/`notify` allowlist; `implement` unconditionally rejected. |
 | 3 | PASS | Repo, author, state and label checked; record authorization is independently required. |
 | 4 | PASS | Both record and handoff path/ref/blob SHA are exact and tested. |
-| 5 | PASS | Missing, multiple, duplicate, ambiguous, expired and cancelled inputs fail closed. |
+| 5 | PASS | Missing, multiple, duplicate, ambiguous, expired and cancelled inputs fail closed; Revision 01 exact scalar types close B2A-QA-001. |
 | 6 | PASS | Module allowlist, module/path binding and changed SHA rejection tested. |
 | 7 | PASS | 008 notification is allowed only as notification; fixed message says implementation remains blocked. |
 | 8 | PASS | Hostile Issue prose, URLs and shell text never enter the fixed message. |
@@ -84,7 +109,7 @@ All sender tests inject fake runners. The only real Codex command used during pr
 
 ## Independent QA request
 
-Please inspect the actual PR and reproduce the policy, persistence and queue-spy tests. Confirm the branch/base/head, exact diff, B1 regression, default-off consent, local UUID privacy, fixed command/message, strict record/handoff identity, no real queue call, no GitHub writes and no background/module changes. Post one PR conversation comment with reviewed SHA, commands/exit codes, the 24-row decision and exactly one result:
+Please inspect the actual PR and reproduce the original five B2A-QA-001 attacks plus adjacent bool/int/float/string/null substitutions. Confirm they block before PREPARED/sender access, then repeat the policy, persistence and queue-spy review. Confirm branch/base/head, exact diff, B1 regression, default-off consent, local UUID privacy, fixed command/message, strict record/handoff identity, no real queue call, no GitHub writes and no background/module changes. Post one PR conversation comment with reviewed SHA, commands/exit codes, the 24-row decision and exactly one result:
 
 - `ACCEPTED`
 - `ACCEPTED WITH FIXES`
