@@ -5,3 +5,33 @@ output/
 vite.config.js
 vite.config.d.ts
 .DS_Store
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.token
+*credentials*.json
+
+# Local databases, backups, and temporary files
+*.db
+*.sqlite
+*.sqlite3
+*.bak
+*.backup
+*.dump
+tmp/
+temp/
+.cache/
+
+# Local archives and personal/course source material
+*.zip
+*.7z
+*.rar
+personal-data/
+course-materials/
+imports/
