@@ -8,7 +8,7 @@
 - **B2A Development Authorization:** APPROVED FOR **CODE + MOCK TESTS + INDEPENDENT QA ONLY**
 - **B2A Implementation:** **CODE ACCEPTED / MERGED INTO `main`** — PR #9 Revision 01 accepted candidate `cba80fa7eabb55abf0c928e68ddad622e38a6516`, merge commit `ca68d1c1f952b3766647e2810e72483dfd5cef2c`; default-disabled notification sender, not running automatically
 - **B2A Independent QA:** **ACCEPTED FOR CODE** — Revision 01 23 PASS / 0 FAIL / 1 NOT VERIFIED; original candidate REJECTED, B2A-QA-001 High CLOSED. QA: https://github.com/zyyu1/personal-workspace/pull/9#issuecomment-7064087898
-- **B2A Real Windows Host Queue Probe:** **ONE-TIME HARMLESS PROBE AUTHORIZED / NOT YET RUN** on 2026-11-21 after user requested continuation. Scoped to Issue #10, pinned `main` manifest and the exact originally verified Desktop thread; QA item #24 remains NOT VERIFIED until the observed same-thread nonce ACK.
+- **B2A Real Windows Host Queue Probe:** **INCONCLUSIVE / ACK PENDING (2026-11-21)** — the single authorized B2A queue submission on Issue #10 returned `QUEUE_SUBMITTED / QUEUE_EXIT_ZERO_NOT_ACK`, exit 0. Exact original-thread visible delivery/nonce ACK **NOT YET OBSERVED** while the operator turn remained active. The one-shot permission has been **consumed**; `dispatch:approved` label removed. QA #24 remains NOT VERIFIED; **NO RESEND**.
 - **B2B Unattended Windows Polling:** NOT AUTHORIZED / NOT INSTALLED
 - **B3 Automatic Implementation Routing:** NOT AUTHORIZED
 - **B0 Existing-Session Probe:** ACCEPTED — `codex queue` reached same original Windows Desktop thread, Issue #3
@@ -20,7 +20,7 @@
 - **Module 007:** Handoff design approved; last verified `docs/handoffs/007/STATUS.md` says NOT STARTED / QA PENDING
 - **Module 008:** Design approved; remains NOT STARTED and BLOCKED by Module 007 independent QA accepted implementation
 - **Design Draft PR #7:** Historical proposal preserved; approved design on `main` is authoritative
-- **Next Action:** Existing Windows Codex execution operator reads `docs/dispatch/B2A_WINDOWS_LIVE_PROBE_V1.md` and Issue #10, performs all preflight/identity/SHA/current-thread checks and **at most one** `b2_notify.py --notify-once --enable-notifications` run, restores `dispatch_enabled=false`, reports sanitized outcome on Issue #10 and STOPS. If preflight fails or expiry passes, NO SEND. B2B/B3 and Modules 007/008 remain blocked.
+- **Next Action:** **OBSERVATION ONLY** after the original Windows Codex execution turn completes: inspect the supported view for the exact same-thread nonce ACK and manually report evidence to Issue #10. Do not invoke B2A or `codex queue` again, refresh labels, alter expiry, reset local outbox or force resume. `dispatch_enabled=false` remains in effect. Design Window independently resolves PASS / FAIL / INCONCLUSIVE. B2B/B3 and Modules 007/008 remain blocked.
 
 **Approval boundary:** User's B2 design confirmation permits design freeze and the publication of a separate, scoped B2A code implementation instruction. It does not enable or install unattended automatic dispatch and does not authorize a real `codex queue` probe. B2B/B3 and module implementation remain separate future gates.
 
@@ -72,3 +72,18 @@ The earlier rejected candidate and remediation authorization are historical evid
 - **B2B/B3:** NOT AUTHORIZED / NOT RUNNING. No Task Scheduler, background polling, auto-ACK, GitHub poller write permissions, auto-implementation, or work on Modules 007/008.
 
 The preceding historical B2A code-only limitation was true at merge time. This new section is the later **limited live probe authorization**, not general permission to send other messages.
+
+## B2A One-Shot Host Run — QUEUE_SUBMITTED / ACK PENDING (2026-11-21)
+
+- **Operator report:** https://github.com/zyyu1/personal-workspace/issues/10#issuecomment-7064280840
+- **Design Window reconciliation:** https://github.com/zyyu1/personal-workspace/issues/10#issuecomment-7064300388
+- **B2A invocation:** exactly one accepted `py -3.13 tools/dispatch-inbox/b2_notify.py --notify-once --enable-notifications`, exit 0
+- **Queue status:** `QUEUE_SUBMITTED / QUEUE_EXIT_ZERO_NOT_ACK` — this is not proof of Desktop delivery, prompt processing or ACK
+- **Observed same-thread ACK:** **NO / PENDING** while original thread's operator turn was still active at report time
+- **Local state:** `dispatch_enabled=false` restored; one `QUEUE_SUBMITTED` outbox record preserved; lock released; project Git worktree CLEAN; no implementation side effects
+- **GitHub safety:** the one-shot `dispatch:approved` label on Issue #10 was **removed after the submitted attempt**; Issue #10 remains OPEN solely for operator evidence and final disposition. Do not re-add the label or recreate the authorized dispatch.
+- **Next permitted activity:** inspect original supported Desktop thread **after turn completion**, optionally post redacted exact ACK evidence to Issue #10; **no repeat queue submission**
+- **B2A operational acceptance:** INCONCLUSIVE / ACK PENDING, QA #24 NOT VERIFIED
+- **B2B / B3:** NOT AUTHORIZED, NOT RUNNING; Module 008 remains BLOCKED by Module 007 independent QA
+
+The earlier one-time probe authorization was consumed; the status above supersedes the historical 'NOT YET RUN' and the earlier authorized-but-unused notice. A later same-thread ACK may justify a formal acceptance update after independent review, but cannot reactivate delivery permission.
