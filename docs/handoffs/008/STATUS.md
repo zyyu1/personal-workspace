@@ -25,3 +25,10 @@ The approved UI/UX design is frozen. The handoff's presence on GitHub **does not
 - **Other workstreams:** B2B paused; B3 and real Codex Queue not authorized. No automatic implementation dispatch.
 
 This is a dependency-state correction only; it does **not** activate the earlier conditional execution instruction.
+
+## User-Specified Sequencing — Finish Module 007 Host QA First (2026-11-21)
+
+- User explicitly directs: **complete Module 007's remaining native Windows picker acceptance before initiating Module 008**.
+- Module 007 real-host QA authority and evidence collection: [host instruction](https://github.com/zyyu1/personal-workspace/blob/main/docs/handoffs/007/MODULE_007_WINDOWS_PICKER_HOST_QA_INSTRUCTION.md), [Issue #16](https://github.com/zyyu1/personal-workspace/issues/16#issuecomment-7066306276).
+- **Module 008 implementation: NOT STARTED / WAITING FOR M007 HOST QA FINAL DESIGN WINDOW DISPOSITION.** Independent host evidence must be reviewed; any remaining PARTIAL must be explicitly resolved or separately accepted by the user/Design Window, never silently upgraded to PASS.
+- After that, Design Window must verify actual merged Module 007 interfaces against Module 008's frozen design and separately authorize any 008 execution. This section **does not authorize development today**.
