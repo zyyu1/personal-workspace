@@ -17,7 +17,7 @@ const evidence:SourceEvidence[]=[
  {id:'evidence-atlas-cfp-v2',url:'https://example.org/atlas-research/cfp',sourceType:'official',fetchedAt:'2026-11-20T08:00:00Z',verifiedAt:'2026-11-20T09:15:00Z',verifiedBy:'Demo curator',fingerprint:'sha256:demo-atlas-v2',note:'Fictional official-looking sample; not a real CFP.'},
  {id:'evidence-atlas-cfp-v1',url:'https://example.org/atlas-research/cfp-archive',sourceType:'official',fetchedAt:'2026-10-02T08:00:00Z',verifiedAt:'2026-10-02T09:00:00Z',verifiedBy:'Demo curator',fingerprint:'sha256:demo-atlas-v1',note:'Superseded fictional sample.'},
  {id:'evidence-jas-manual',url:'https://example.org/jas/authors',sourceType:'manual',fetchedAt:'2026-11-18T13:00:00Z',note:'Rolling journal; no deadline asserted.'},
- {id:'evidence-emw-community',url:'https://github.com/ccfddl/ccf-deadlines',sourceType:'community',fetchedAt:'2026-11-19T11:00:00Z',note:'Community discovery only; requires official verification.'},
+ {id:'evidence-emw-community',sourceType:'community',fetchedAt:'2026-11-19T11:00:00Z',note:'Community discovery only; source URL is missing and official verification is required.'},
 ]
 const deadlines:DeadlineEvent[]=[
  {id:'deadline-atlas-abstract',opportunityId:'opp-atlas-main',trackId:'track-atlas-main',eventType:'Abstract registration',datePrecision:'exact',originalLocalDatetime:'2027-02-14T23:59:00',originalTimezone:'AoE',utcInstant:'2027-02-15T11:59:00.000Z',evidenceId:'evidence-atlas-cfp-v2',verificationStatus:'verified',verifiedAt:'2026-11-20T09:15:00Z',lastCheckedAt:'2026-11-20T09:15:00Z',revision:1,revisions:[],calendarItemId:'calendar-deadline-atlas-abstract'},
