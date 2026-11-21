@@ -1,0 +1,25 @@
+{
+  "issues": [
+    {
+      "number": 9002,
+      "state": "open",
+      "repository_full_name": "zyyu1/personal-workspace",
+      "user": { "login": "zyyu1" },
+      "labels": [{ "name": "dispatch:approved" }],
+      "body": "```dispatch\n{\"schema_version\":1,\"dispatch_id\":\"FIXTURE-BLOCKED-008\",\"mode\":\"implement\",\"module\":\"008\",\"repo\":\"zyyu1/personal-workspace\",\"handoff_path\":\"docs/handoffs/008/EXECUTION_INSTRUCTION.md\",\"handoff_blob_sha\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"created_by\":\"zyyu1\",\"expires_at\":\"2099-12-31T23:59:59Z\",\"requires_human_approval\":true,\"gate_status\":\"READY\"}\n```"
+    }
+  ],
+  "files": {
+    "docs/handoffs/008/EXECUTION_INSTRUCTION.md": {
+      "sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "ref": "main",
+      "content": "# Execution Instruction\nModule: 008\nStatus: IMPLEMENTATION AUTHORIZED\nImplementation Authorization: ACTIVE"
+    },
+    "docs/handoffs/007/STATUS.md": {
+      "sha": "cccccccccccccccccccccccccccccccccccccccc",
+      "ref": "main",
+      "content": "# Module 007 Status\nModule: 007\nIndependent QA: PENDING\nImplementation Acceptance: PENDING\nAccepted Implementation SHA: MISSING\nIndependent QA Report: docs/handoffs/007/QA_RESULT.md"
+    }
+  },
+  "commits": []
+}
