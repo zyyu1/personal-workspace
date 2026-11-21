@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -360,6 +361,100 @@ class AdapterTests(unittest.TestCase):
         with self.assertRaises(dispatch_inbox.AdapterUnavailable) as error:
             client.ensure_available()
         self.assertEqual(error.exception.code, "GH_NOT_INSTALLED")
+
+    def test_utf8_json_is_locale_independent_under_simulated_cp936(self):
+        payload = {"title": "中文 résumé", "repository": "zyyu1/personal-workspace"}
+        calls = []
+        def runner(command, **kwargs):
+            calls.append(kwargs)
+            return subprocess.CompletedProcess(
+                command, 0, json.dumps(payload, ensure_ascii=False).encode("utf-8"), b""
+            )
+        client = dispatch_inbox.GhApiClient(runner=runner, retries=0)
+        client.executable = "gh"
+        with mock.patch("locale.getpreferredencoding", return_value="cp936"):
+            result = client._run(["api", "--method", "GET", "repos/x/y/issues"])
+        self.assertEqual(result, payload)
+        self.assertIs(calls[0]["text"], False)
+        self.assertIs(calls[0]["shell"], False)
+
+    def test_success_missing_empty_and_malformed_stdout_fail_closed(self):
+        cases = [None, b"", b"{not-json", ""]
+        for stdout in cases:
+            with self.subTest(stdout=stdout):
+                def runner(command, **kwargs):
+                    return subprocess.CompletedProcess(command, 0, stdout, b"")
+                client = dispatch_inbox.GhApiClient(runner=runner, retries=0)
+                client.executable = "gh"
+                with self.assertRaises(dispatch_inbox.AdapterUnavailable) as error:
+                    client._run(["api", "--method", "GET", "repos/x/y/issues"])
+                self.assertEqual(error.exception.code, "GH_MALFORMED_RESPONSE")
+
+    def test_invalid_utf8_stdout_fails_closed(self):
+        secret = b"token-secret\xff\xfe"
+        def runner(command, **kwargs):
+            return subprocess.CompletedProcess(command, 0, secret, b"")
+        client = dispatch_inbox.GhApiClient(runner=runner, retries=0)
+        client.executable = "gh"
+        with self.assertRaises(dispatch_inbox.AdapterUnavailable) as error:
+            client._run(["api", "--method", "GET", "repos/x/y/issues"])
+        self.assertEqual(error.exception.code, "GH_MALFORMED_RESPONSE")
+        self.assertNotIn("token-secret", str(error.exception))
+
+    def test_nonzero_missing_and_non_utf8_stderr_are_sanitized(self):
+        cases = [
+            (None, "GH_REQUEST_FAILED"),
+            (b"\x81\x40 HTTP 401", "GH_AUTH_UNAVAILABLE"),
+            (b"\x81\x40 HTTP 403 forbidden", "GH_FORBIDDEN"),
+            (b"\x81\x40 HTTP 429 rate limit", "GH_RATE_LIMITED"),
+            (b"\x81\x40 connection offline", "GH_OFFLINE"),
+        ]
+        for stderr, expected in cases:
+            with self.subTest(expected=expected):
+                def runner(command, **kwargs):
+                    return subprocess.CompletedProcess(command, 1, None, stderr)
+                client = dispatch_inbox.GhApiClient(runner=runner, retries=0)
+                client.executable = "gh"
+                with self.assertRaises(dispatch_inbox.AdapterUnavailable) as error:
+                    client._run(["api", "--method", "GET", "repos/x/y/issues"])
+                self.assertEqual(error.exception.code, expected)
+
+    def test_auth_success_does_not_require_stdout(self):
+        def runner(command, **kwargs):
+            return subprocess.CompletedProcess(command, 0, None, None)
+        client = dispatch_inbox.GhApiClient(runner=runner, retries=0)
+        client.executable = "gh"
+        self.assertEqual(client._run(["auth", "status"], auth_check=True), {"authenticated": True})
+
+    def test_runner_unicode_error_is_bounded_unavailable(self):
+        def runner(command, **kwargs):
+            raise UnicodeDecodeError("cp936", b"\xff", 0, 1, "invalid")
+        client = dispatch_inbox.GhApiClient(runner=runner, retries=0)
+        client.executable = "gh"
+        with self.assertRaises(dispatch_inbox.AdapterUnavailable) as error:
+            client._run(["api", "--method", "GET", "repos/x/y/issues"])
+        self.assertEqual(error.exception.code, "GH_MALFORMED_RESPONSE")
+
+    def test_invalid_returncode_and_oversized_bytes_fail_closed(self):
+        invalid_process = subprocess.CompletedProcess(["gh"], 0, b"{}", b"")
+        invalid_process.returncode = None
+        def invalid_runner(command, **kwargs):
+            return invalid_process
+        invalid_client = dispatch_inbox.GhApiClient(runner=invalid_runner, retries=0)
+        invalid_client.executable = "gh"
+        with self.assertRaises(dispatch_inbox.AdapterUnavailable) as invalid_error:
+            invalid_client._run(["api", "--method", "GET", "repos/x/y/issues"])
+        self.assertEqual(invalid_error.exception.code, "GH_MALFORMED_RESPONSE")
+
+        def oversized_runner(command, **kwargs):
+            return subprocess.CompletedProcess(
+                command, 0, b"x" * (dispatch_inbox.MAX_RESPONSE_BYTES + 1), b""
+            )
+        oversized_client = dispatch_inbox.GhApiClient(runner=oversized_runner, retries=0)
+        oversized_client.executable = "gh"
+        with self.assertRaises(dispatch_inbox.AdapterUnavailable) as oversized_error:
+            oversized_client._run(["api", "--method", "GET", "repos/x/y/issues"])
+        self.assertEqual(oversized_error.exception.code, "GH_RESPONSE_TOO_LARGE")
 
     def test_timeout_is_bounded_unavailable(self):
         def timeout(*args, **kwargs):

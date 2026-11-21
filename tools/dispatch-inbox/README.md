@@ -20,6 +20,8 @@ py -3.13 tools/dispatch-inbox/dispatch_inbox.py --once --dry-run
 
 Exactly one bounded poll is performed. Both flags are mandatory. The GitHub adapter uses only `gh api --method GET`, a 15-second subprocess timeout, at most three pages and at most 30 records per page. It never uses Issue text in a shell command.
 
+The adapter captures `gh` stdout/stderr as bytes rather than using the Windows locale. Successful API JSON is size-bounded and decoded strictly as UTF-8, so a `cp936` system locale cannot corrupt Chinese or accented content. Missing, empty, invalid UTF-8 or malformed JSON stdout fails closed as `GH_MALFORMED_RESPONSE`. Failed-command stderr is bounded and decoded only for sanitized error classification; raw output is never printed or trusted.
+
 Local deterministic fixtures:
 
 ```powershell
@@ -91,6 +93,8 @@ Threats include forged authors/labels, malicious JSON, shell metacharacters, tra
 
 Controls include exact field allowlisting, fixed repo/author/ref, URL/path rejection, SHA pinning, timezone-aware expiry, explicit human-approval flag for implementation mode, canonical authorization/status fields, cross-file QA/SHA consistency, bounded API work, subprocess argument arrays with `shell=False`, local atomic bounded receipts and sanitized outputs. GitHub Contents data requires `encoding=base64`, exact path/type, a matching Git blob SHA and UTF-8 text. Only ASCII CR/LF/space/tab wrapping is removed before strict Base64 validation. The code contains no `codex` invocation and no GitHub write method.
 
+No global code-page, `PYTHONUTF8`, `PYTHONIOENCODING` or console mutation is required. Revision 02 development and unit tests do not authorize a real authenticated host poll; that smoke remains separately gated by independent QA and a later Design Window instruction.
+
 The listener requires only outgoing HTTPS performed by `gh`; it opens no network port and requests no filesystem/network-listening privilege. It does not add a service, startup item, scheduled task, daemon, watcher or background process.
 
 ## Troubleshooting
@@ -98,6 +102,7 @@ The listener requires only outgoing HTTPS performed by `gh`; it opens no network
 - `GH_NOT_INSTALLED`: install/authenticate `gh` manually only after separate operator approval. B1 never installs it.
 - `GH_AUTH_UNAVAILABLE`: run `gh auth status -h github.com` yourself and correct the account/scopes without pasting tokens into logs.
 - `GH_TIMEOUT`, `GH_OFFLINE`, `GH_RATE_LIMITED`, `GH_FORBIDDEN`, `GH_NOT_FOUND`, `GH_REQUEST_FAILED`, `GH_MALFORMED_RESPONSE`, `GH_RESPONSE_TOO_LARGE`, `GH_PAGE_LIMIT_REACHED`: correct connectivity, access, or the bounded polling configuration, then rerun manually. The tool never prints the raw authentication response.
+- On non-UTF-8 Windows locales, do not work around adapter failures with `chcp`, `PYTHONUTF8` or `PYTHONIOENCODING`. Record the sanitized code and follow the current approved remediation/smoke gate.
 - `NO_ELIGIBLE_TASKS`: no bounded open Issue set was returned. This is not execution authorization.
 
 ## Disable and uninstall
