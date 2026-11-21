@@ -3,7 +3,7 @@ import { GlobalResourceService } from '../../../services/globalResourceService'
 import { GlobalTaskService } from '../../../services/globalTaskService'
 import { TimeEntryService } from '../../../services/timeEntryService'
 import { parseSafeExternalUrl } from '../../../services/safeExternalUrl'
-import type { Course, CourseAssessment, CourseMaterialEntry, CourseOffering, CourseOfferingView, ManifestPreview, MaterialClassification, StudyProgressState, StudyState } from '../types'
+import type { Course, CourseAssessment, CourseMaterialEntry, CourseOffering, CourseOfferingView, CourseStudyProgress, ManifestPreview, MaterialClassification, StudyProgressState, StudyState } from '../types'
 
 const sections=(offeringId:string)=>[
   ['lectures','Lectures / Skript'],['exercises','Exercises / Aufgaben'],['tutorials','Tutorials / Solutions'],['past-papers','Past papers'],['labs','Labs'],['notes','Notes'],['administrative','Administrative'],['other','Other'],
@@ -14,9 +14,27 @@ const initial:StudyState={
   offerings:[{id:'offering-system-theory-ws26',courseId:'course-system-theory',term:'Winter 2026/27',enrollmentStatus:'active',lecturer:'Demo lecturer',demo:true}],
   sources:[],imports:[],entries:[],sections:sections('offering-system-theory-ws26'),progress:[],
   assessments:[{id:'assessment-system-theory-exam',offeringId:'offering-system-theory-ws26',assessmentType:'exam',title:'Final examination',verified:false,provenance:'Date not yet confirmed'}],
+  learningUnits:[],exerciseSets:[],exerciseItems:[],attempts:[],evidenceLinks:[],
 }
 const copy=<T>(value:T):T=>structuredClone(value)
-const repository=createVersionedRepository<StudyState>({domain:'study-courses',schemaVersion:1,seedVersion:1,seed:()=>copy(initial)})
+const legacyStudyState=(value:unknown)=>{
+  if(!value||typeof value!=='object')throw validationFailure('Stored Study data is invalid')
+  const state=value as Partial<StudyState>,required=['courses','offerings','sources','imports','entries','sections','progress','assessments'] as const
+  if(required.some(key=>!Array.isArray(state[key])))throw validationFailure('Stored Study v1 data is incomplete')
+  return state
+}
+export const migrateStudyState=(value:unknown,fromVersion:number):StudyState=>{
+  if(fromVersion!==1)throw validationFailure(`Unsupported Study schema ${fromVersion}`)
+  const state=legacyStudyState(value)
+  const progress=(state.progress as CourseStudyProgress[]).map(row=>{
+    const targetId=row.targetId??row.resourceId??row.sectionId??row.id
+    const studyState=row.studyState??(row.state==='studying'?'in_progress':row.state==='studied'||row.state==='reviewed'?'studied':'not_started')
+    return{...row,targetType:row.targetType??'resource' as const,targetId,studyState,needsReview:row.needsReview??false,lastReviewedAt:row.lastReviewedAt??(row.state==='reviewed'?row.updatedAt:undefined)}
+  })
+  return{courses:copy(state.courses!),offerings:copy(state.offerings!),sources:copy(state.sources!),imports:copy(state.imports!),entries:copy(state.entries!),sections:copy(state.sections!),progress:copy(progress),assessments:copy(state.assessments!),learningUnits:copy(state.learningUnits??[]),exerciseSets:copy(state.exerciseSets??[]),exerciseItems:copy(state.exerciseItems??[]),attempts:copy(state.attempts??[]),evidenceLinks:copy(state.evidenceLinks??[])}
+}
+export const StudyRepository=createVersionedRepository<StudyState>({domain:'study-courses',schemaVersion:2,seedVersion:1,seed:()=>copy(initial),migrate:migrateStudyState})
+const repository=StudyRepository
 const hash=(value:string)=>{let result=2166136261;for(const char of value){result^=char.codePointAt(0)??0;result=Math.imul(result,16777619)}return(result>>>0).toString(36)}
 const resourceKind=(path:string)=>{const ext=path.split('.').pop()?.toLowerCase();return ext==='md'?'markdown':ext||'file'}
 const mime=(path:string)=>path.toLowerCase().endsWith('.pdf')?'application/pdf':path.toLowerCase().endsWith('.md')?'text/markdown':undefined
@@ -27,7 +45,7 @@ export const StudyCourseService={
     const state=await repository.getState(),offering=state.offerings.find(row=>row.id===offeringId),course=state.courses.find(row=>row.id===offering?.courseId)
     if(!offering||!course)return undefined
     const resources=(await GlobalResourceService.list()).filter(resource=>resource.links.some(link=>link.entityType==='course-offering'&&link.entityId===offeringId))
-    return copy({course,offering,sources:state.sources.filter(row=>row.courseOfferingId===offeringId),entries:state.entries.filter(row=>state.sources.some(source=>source.id===row.sourceId&&source.courseOfferingId===offeringId)),sections:state.sections.filter(row=>row.offeringId===offeringId),progress:state.progress.filter(row=>row.offeringId===offeringId),assessments:state.assessments.filter(row=>row.offeringId===offeringId),resources,tasks:await GlobalTaskService.list(offeringId),timeEntries:await TimeEntryService.list(offeringId)})
+    return copy({course,offering,sources:state.sources.filter(row=>row.courseOfferingId===offeringId),entries:state.entries.filter(row=>state.sources.some(source=>source.id===row.sourceId&&source.courseOfferingId===offeringId)),sections:state.sections.filter(row=>row.offeringId===offeringId),progress:state.progress.filter(row=>row.offeringId===offeringId),assessments:state.assessments.filter(row=>row.offeringId===offeringId),learningUnits:state.learningUnits.filter(row=>row.courseOfferingId===offeringId),exerciseSets:state.exerciseSets.filter(row=>row.courseOfferingId===offeringId),exerciseItems:state.exerciseItems.filter(row=>row.courseOfferingId===offeringId),attempts:state.attempts.filter(row=>row.courseOfferingId===offeringId),evidenceLinks:state.evidenceLinks.filter(row=>row.courseOfferingId===offeringId),resources,tasks:await GlobalTaskService.list(offeringId),timeEntries:await TimeEntryService.list(offeringId)})
   },
   async createOffering(values:{title:string;code?:string;term:string;enrollmentStatus:CourseOffering['enrollmentStatus'];lecturer?:string;ects?:number;courseUrl?:string}){
     if(!values.title.trim()||!values.term.trim())throw validationFailure('Course title and term are required')
@@ -59,7 +77,7 @@ export const StudyCourseService={
     }))
   },
   async updateClassification(entryId:string,classification:MaterialClassification){return unwrapMutation(await repository.mutate(state=>{const entry=state.entries.find(row=>row.id===entryId);if(!entry)throw notFoundFailure('Material entry not found');const next={...entry,classification,manualClassification:true};return{state:{...state,entries:state.entries.map(row=>row.id===entryId?next:row)},value:next}}))},
-  async markProgress(offeringId:string,resourceId:string,stateValue:StudyProgressState){return unwrapMutation(await repository.mutate(state=>{const existing=state.progress.find(row=>row.offeringId===offeringId&&row.resourceId===resourceId),next={id:existing?.id??stableId('study-progress'),offeringId,resourceId,state:stateValue,updatedAt:new Date().toISOString()};return{state:{...state,progress:[...state.progress.filter(row=>row.id!==existing?.id),next]},value:next}}))},
+  async markProgress(offeringId:string,resourceId:string,stateValue:StudyProgressState){return unwrapMutation(await repository.mutate(state=>{const existing=state.progress.find(row=>row.offeringId===offeringId&&(row.resourceId===resourceId||(row.targetType==='resource'&&row.targetId===resourceId))),updatedAt=new Date().toISOString(),next:CourseStudyProgress={...existing,id:existing?.id??stableId('study-progress'),offeringId,targetType:'resource',targetId:resourceId,resourceId,state:stateValue,studyState:stateValue==='studying'?'in_progress':stateValue==='studied'||stateValue==='reviewed'?'studied':'not_started',lastReviewedAt:stateValue==='reviewed'?updatedAt:existing?.lastReviewedAt,updatedAt};return{state:{...state,progress:[...state.progress.filter(row=>row.id!==existing?.id),next]},value:next}}))},
   async createStudyTask(offeringId:string,resourceId:string,title:string){const existing=(await GlobalTaskService.list(offeringId)).find(task=>task.resourceLinks?.some(link=>link.resourceId===resourceId));if(existing)return existing;const task=await GlobalTaskService.create({projectId:offeringId,area:'study',title:`Study: ${title}`,stage:'Course materials',taskType:'reading',priority:'medium',resourceLinks:[{id:`task-resource-${resourceId}`,resourceId,label:title,kind:'file',available:false}]});await GlobalResourceService.linkResource(resourceId,{type:'task',id:task.id,label:task.title},'study material');return task},
   async addExistingResource(offeringId:string,resourceId:string){
     const resource=await GlobalResourceService.get(resourceId);if(!resource)throw notFoundFailure('Resource not found')
