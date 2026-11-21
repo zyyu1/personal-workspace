@@ -123,6 +123,8 @@ B2 notification delivery and B3 implementation routing are separate, blocked pha
 4. Exactly one open Issue passes the strict v2 Issue, main-branch notification-authorization record, handoff SHA, expiry and identity checks.
 5. The durable local outbox and one-instance lock can be written before the queue process starts.
 
+Revision 01 enforces exact JSON scalar types before any authorization comparison: integer fields must be actual JSON integers (never booleans or integral floats), authorization must be the actual JSON boolean `true`, the local approval flag must be the actual boolean `false`, and identity/path/SHA fields must be actual strings. Values such as `2.0`, `1`, `"true"` or `null` are never coerced and fail closed before PREPARED state or sender access.
+
 No local configuration is committed. A future operator configuration has exactly these keys; keep `dispatch_enabled` false until independent QA and a separate Design Window live-probe authorization:
 
 ```json

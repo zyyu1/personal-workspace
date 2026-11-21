@@ -83,6 +83,36 @@ RECORD_FIELDS = frozenset(
         "created_by",
     }
 )
+ISSUE_FIELD_TYPES: dict[str, type[Any]] = {
+    "schema_version": int,
+    "dispatch_id": str,
+    "mode": str,
+    "module": str,
+    "repo": str,
+    "notification_record_path": str,
+    "notification_record_sha": str,
+    "handoff_path": str,
+    "handoff_blob_sha": str,
+    "created_by": str,
+    "expires_at": str,
+    "requires_human_approval": bool,
+}
+RECORD_FIELD_TYPES: dict[str, type[Any]] = {
+    "schema_version": int,
+    "dispatch_id": str,
+    "mode": str,
+    "module": str,
+    "repo": str,
+    "issue_number": int,
+    "notification_authorized": bool,
+    "authorization_scope": str,
+    "handoff_path": str,
+    "handoff_blob_sha": str,
+    "notification_template_version": int,
+    "expires_at": str,
+    "nonce": str,
+    "created_by": str,
+}
 CONFIG_FIELDS = frozenset(
     {
         "version",
@@ -174,7 +204,12 @@ class LocalConfig:
             raise B2Error("CONFIG_MISSING") from exc
         except (OSError, UnicodeError, json.JSONDecodeError) as exc:
             raise B2Error("CONFIG_INVALID") from exc
-        if not isinstance(raw, dict) or set(raw) != CONFIG_FIELDS or raw.get("version") != 1:
+        if (
+            type(raw) is not dict
+            or set(raw) != CONFIG_FIELDS
+            or type(raw.get("version")) is not int
+            or raw.get("version") != 1
+        ):
             raise B2Error("CONFIG_INVALID")
         executable = raw.get("codex_executable")
         values = {
@@ -185,8 +220,8 @@ class LocalConfig:
             "expected_user": raw.get("expected_user"),
             "thread_uuid": raw.get("thread_uuid"),
         }
-        if not isinstance(executable, str) or not all(
-            isinstance(value, expected)
+        if type(executable) is not str or not all(
+            type(value) is expected
             for value, expected in (
                 (values["dispatch_enabled"], bool),
                 (values["notification_only"], bool),
@@ -235,7 +270,7 @@ def default_local_dir() -> Path:
 
 
 def _json_fence(body: Any, pattern: re.Pattern[str], expected: frozenset[str]) -> dict[str, Any]:
-    if not isinstance(body, str) or len(body.encode("utf-8")) > MAX_BODY_BYTES:
+    if type(body) is not str or len(body.encode("utf-8")) > MAX_BODY_BYTES:
         raise B2Error("BODY_INVALID")
     matches = list(pattern.finditer(body))
     if len(matches) != 1:
@@ -262,13 +297,13 @@ def _json_fence(body: Any, pattern: re.Pattern[str], expected: frozenset[str]) -
         raise
     except (json.JSONDecodeError, UnicodeError) as exc:
         raise B2Error("ENVELOPE_MALFORMED") from exc
-    if not isinstance(value, dict) or set(value) != expected:
+    if type(value) is not dict or set(value) != expected:
         raise B2Error("SCHEMA_FIELDS_MISMATCH")
     return value
 
 
 def _expiry(raw: Any) -> dt.datetime:
-    if not isinstance(raw, str) or len(raw) > 40:
+    if type(raw) is not str or len(raw) > 40:
         raise B2Error("EXPIRY_INVALID")
     try:
         value = dt.datetime.fromisoformat(raw.replace("Z", "+00:00"))
@@ -290,18 +325,42 @@ def _safe_path(raw: Any, *, record: bool) -> str:
 
 
 def _labels(issue: Mapping[str, Any]) -> set[str]:
-    return dispatch_inbox._label_names(issue)
+    labels = issue.get("labels")
+    if type(labels) is not list:
+        raise B2Error("ISSUE_LABELS_INVALID")
+    result: set[str] = set()
+    for label in labels:
+        if type(label) is str:
+            result.add(label)
+        elif type(label) is dict and type(label.get("name")) is str:
+            result.add(label["name"])
+        else:
+            raise B2Error("ISSUE_LABELS_INVALID")
+    return result
+
+
+def _validate_field_types(
+    value: Mapping[str, Any], expected: Mapping[str, type[Any]], reason_code: str
+) -> None:
+    for field, expected_type in expected.items():
+        if type(value[field]) is not expected_type:
+            raise B2Error(reason_code)
 
 
 def _validate_issue_identity(issue: Mapping[str, Any]) -> int:
     number = issue.get("number")
-    if not isinstance(number, int) or number <= 0:
+    if type(number) is not int or number <= 0:
         raise B2Error("ISSUE_NUMBER_INVALID")
-    if issue.get("repository_full_name") != ALLOWED_REPOSITORY:
+    repository = issue.get("repository_full_name")
+    if type(repository) is not str or repository != ALLOWED_REPOSITORY:
         raise B2Error("REPOSITORY_NOT_ALLOWED")
-    if issue.get("state") != "open":
+    state = issue.get("state")
+    if type(state) is not str or state != "open":
         raise B2Error("ISSUE_NOT_OPEN")
-    if dispatch_inbox._author_login(issue) != ALLOWED_AUTHOR:
+    user = issue.get("user")
+    if type(user) is not dict or type(user.get("login")) is not str:
+        raise B2Error("AUTHOR_NOT_ALLOWED")
+    if user["login"] != ALLOWED_AUTHOR:
         raise B2Error("AUTHOR_NOT_ALLOWED")
     labels = _labels(issue)
     if CANCELLED_LABEL in labels:
@@ -318,15 +377,16 @@ def validate_notification(
     now: dt.datetime | None = None,
 ) -> tuple[AuthorizedNotification | None, NotifyResult]:
     current = (now or dt.datetime.now(dt.timezone.utc)).astimezone(dt.timezone.utc)
-    number = issue.get("number") if isinstance(issue.get("number"), int) else None
+    number = issue.get("number") if type(issue.get("number")) is int else None
     dispatch_id: str | None = None
     try:
         issue_number = _validate_issue_identity(issue)
         envelope = _json_fence(issue.get("body"), ISSUE_FENCE_RE, ISSUE_FIELDS)
-        dispatch_id = envelope.get("dispatch_id") if isinstance(envelope.get("dispatch_id"), str) else None
+        _validate_field_types(envelope, ISSUE_FIELD_TYPES, "ISSUE_FIELD_TYPE_MISMATCH")
+        dispatch_id = envelope["dispatch_id"]
         if envelope.get("schema_version") != SCHEMA_VERSION:
             raise B2Error("SCHEMA_VERSION_UNSUPPORTED")
-        if not isinstance(dispatch_id, str) or not dispatch_inbox.DISPATCH_ID_RE.fullmatch(dispatch_id):
+        if not dispatch_inbox.DISPATCH_ID_RE.fullmatch(dispatch_id):
             raise B2Error("DISPATCH_ID_INVALID")
         mode = envelope.get("mode")
         if mode == "implement":
@@ -338,7 +398,7 @@ def validate_notification(
             raise B2Error("MODULE_NOT_ALLOWED")
         if envelope.get("repo") != ALLOWED_REPOSITORY or envelope.get("created_by") != ALLOWED_AUTHOR:
             raise B2Error("ENVELOPE_IDENTITY_MISMATCH")
-        if envelope.get("requires_human_approval") is not False:
+        if envelope["requires_human_approval"] is not False:
             raise B2Error("UNSUPPORTED_APPROVAL_MODE")
         record_path = _safe_path(envelope.get("notification_record_path"), record=True)
         handoff_path = _safe_path(envelope.get("handoff_path"), record=False)
@@ -367,6 +427,9 @@ def validate_notification(
         ):
             raise B2Error("NOTIFICATION_RECORD_SHA_MISMATCH")
         record = _json_fence(record_snapshot.content, RECORD_FENCE_RE, RECORD_FIELDS)
+        _validate_field_types(record, RECORD_FIELD_TYPES, "RECORD_FIELD_TYPE_MISMATCH")
+        if record["notification_authorized"] is not True:
+            raise B2Error("AUTHORIZATION_RECORD_MISMATCH")
         expected_record_values = {
             "schema_version": SCHEMA_VERSION,
             "dispatch_id": dispatch_id,
@@ -374,7 +437,6 @@ def validate_notification(
             "module": module,
             "repo": ALLOWED_REPOSITORY,
             "issue_number": issue_number,
-            "notification_authorized": True,
             "authorization_scope": "NOTIFICATION_ONLY",
             "handoff_path": handoff_path,
             "handoff_blob_sha": handoff_sha,

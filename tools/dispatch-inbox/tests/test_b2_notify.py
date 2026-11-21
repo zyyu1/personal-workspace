@@ -123,7 +123,156 @@ def local_config(directory: Path, *, enabled=True, thread_uuid=THREAD_UUID):
     )
 
 
+def assert_rejected_without_delivery(testcase, issue, fetch, expected_reason):
+    with tempfile.TemporaryDirectory() as directory:
+        root = Path(directory)
+        state_path = root / "state.json"
+        runner = mock.Mock(
+            return_value=subprocess.CompletedProcess(["codex"], 0, b"queued", b"")
+        )
+        authorized, result = b2_notify.validate_notification(issue, fetch, now=NOW)
+        if authorized is not None:
+            b2_notify.attempt_notification(
+                authorized,
+                local_config(root),
+                b2_notify.OutboxStore(state_path),
+                b2_notify.OneInstanceLock(root / "lock"),
+                b2_notify.CodexQueueSender(runner=runner),
+                now=NOW,
+            )
+        testcase.assertIsNone(authorized)
+        testcase.assertEqual(result.reason_code, expected_reason)
+        runner.assert_not_called()
+        testcase.assertFalse(state_path.exists())
+
+
 class PolicyMatrixTests(unittest.TestCase):
+    def test_rev01_original_five_type_confusion_attacks_fail_closed(self):
+        attacks = [
+            (fixture(envelope_overrides={"schema_version": 2.0})[:2], "ISSUE_FIELD_TYPE_MISMATCH"),
+            (fixture(record_overrides={"schema_version": 2.0})[:2], "RECORD_FIELD_TYPE_MISMATCH"),
+            (fixture(record_overrides={"notification_authorized": 1})[:2], "RECORD_FIELD_TYPE_MISMATCH"),
+            (
+                fixture(record_overrides={"notification_template_version": True})[:2],
+                "RECORD_FIELD_TYPE_MISMATCH",
+            ),
+            (fixture(record_overrides={"issue_number": 8001.0})[:2], "RECORD_FIELD_TYPE_MISMATCH"),
+        ]
+        for (issue, fetch), reason in attacks:
+            with self.subTest(reason=reason, body=issue["body"][:80]):
+                assert_rejected_without_delivery(self, issue, fetch, reason)
+
+    def test_rev01_integer_fields_require_exact_int_not_bool_float_string_or_null(self):
+        issue_invalid = [True, False, 2.0, 1.0, "2", None, -1]
+        for value in issue_invalid:
+            with self.subTest(field="issue.schema_version", value=value):
+                issue, fetch, _ = fixture(envelope_overrides={"schema_version": value})
+                assert_rejected_without_delivery(
+                    self, issue, fetch, "ISSUE_FIELD_TYPE_MISMATCH" if type(value) is not int else "SCHEMA_VERSION_UNSUPPORTED"
+                )
+
+        record_cases = {
+            "schema_version": [True, False, 2.0, 1.0, "2", None, -1],
+            "notification_template_version": [True, False, 1.0, 2.0, "1", None, -1],
+            "issue_number": [True, False, 8001.0, 1.0, "8001", None, -1],
+        }
+        for field, values in record_cases.items():
+            for value in values:
+                with self.subTest(field=f"record.{field}", value=value):
+                    issue, fetch, _ = fixture(record_overrides={field: value})
+                    expected = (
+                        "RECORD_FIELD_TYPE_MISMATCH"
+                        if type(value) is not int
+                        else "AUTHORIZATION_RECORD_MISMATCH"
+                    )
+                    assert_rejected_without_delivery(self, issue, fetch, expected)
+
+    def test_rev01_notification_authorized_requires_actual_true(self):
+        for value in [0, False, 1, 1.0, "true", None, [], {}]:
+            with self.subTest(value=value):
+                issue, fetch, _ = fixture(record_overrides={"notification_authorized": value})
+                expected = (
+                    "AUTHORIZATION_RECORD_MISMATCH"
+                    if type(value) is bool
+                    else "RECORD_FIELD_TYPE_MISMATCH"
+                )
+                assert_rejected_without_delivery(self, issue, fetch, expected)
+
+    def test_rev01_outer_issue_number_and_identity_types_are_exact(self):
+        for value in [True, False, 8001.0, "8001", None, -1, 0]:
+            with self.subTest(field="number", value=value):
+                issue, fetch, _ = fixture(issue_overrides={"number": value})
+                assert_rejected_without_delivery(self, issue, fetch, "ISSUE_NUMBER_INVALID")
+        identity_cases = [
+            ({"repository_full_name": 1}, "REPOSITORY_NOT_ALLOWED"),
+            ({"state": True}, "ISSUE_NOT_OPEN"),
+            ({"user": {"login": 1}}, "AUTHOR_NOT_ALLOWED"),
+            ({"labels": [True, {"name": "dispatch:approved"}]}, "ISSUE_LABELS_INVALID"),
+        ]
+        for overrides, reason in identity_cases:
+            with self.subTest(overrides=overrides):
+                issue, fetch, _ = fixture(issue_overrides=overrides)
+                assert_rejected_without_delivery(self, issue, fetch, reason)
+
+    def test_rev01_requires_human_approval_is_exact_boolean_false(self):
+        issue, fetch, _ = fixture(envelope_overrides={"requires_human_approval": False})
+        authorized, result = b2_notify.validate_notification(issue, fetch, now=NOW)
+        self.assertIsNotNone(authorized)
+        self.assertEqual(result.status, "AUTHORIZED_NOTIFICATION")
+        for value in [True, 0, 1, 0.0, 1.0, "false", None, [], {}]:
+            with self.subTest(value=value):
+                issue, fetch, _ = fixture(envelope_overrides={"requires_human_approval": value})
+                expected = (
+                    "UNSUPPORTED_APPROVAL_MODE"
+                    if type(value) is bool
+                    else "ISSUE_FIELD_TYPE_MISMATCH"
+                )
+                assert_rejected_without_delivery(self, issue, fetch, expected)
+
+    def test_rev01_all_string_contract_fields_reject_non_strings(self):
+        envelope_fields = [
+            "dispatch_id",
+            "mode",
+            "module",
+            "repo",
+            "notification_record_path",
+            "notification_record_sha",
+            "handoff_path",
+            "handoff_blob_sha",
+            "created_by",
+            "expires_at",
+        ]
+        record_fields = [
+            "dispatch_id",
+            "mode",
+            "module",
+            "repo",
+            "authorization_scope",
+            "handoff_path",
+            "handoff_blob_sha",
+            "expires_at",
+            "nonce",
+            "created_by",
+        ]
+        for field in envelope_fields:
+            for value in [True, 1, 1.0, None, []]:
+                with self.subTest(scope="issue", field=field, value=value):
+                    issue, fetch, _ = fixture(envelope_overrides={field: value})
+                    assert_rejected_without_delivery(self, issue, fetch, "ISSUE_FIELD_TYPE_MISMATCH")
+        for field in record_fields:
+            for value in [True, 1, 1.0, None, []]:
+                with self.subTest(scope="record", field=field, value=value):
+                    issue, fetch, _ = fixture(record_overrides={field: value})
+                    assert_rejected_without_delivery(self, issue, fetch, "RECORD_FIELD_TYPE_MISMATCH")
+
+    def test_rev01_canonical_types_still_authorize_and_implement_still_blocks(self):
+        issue, fetch, _ = fixture()
+        authorized, result = b2_notify.validate_notification(issue, fetch, now=NOW)
+        self.assertIsNotNone(authorized)
+        self.assertEqual(result.status, "AUTHORIZED_NOTIFICATION")
+        issue, fetch, _ = fixture(envelope_overrides={"mode": "implement"})
+        assert_rejected_without_delivery(self, issue, fetch, "IMPLEMENT_MODE_FORBIDDEN")
+
     def test_matrix_01_b1_dry_run_interface_is_unchanged(self):
         b1_fixture = ROOT / "fixtures" / "eligible.json"
         with mock.patch("subprocess.run") as runner:
@@ -596,6 +745,58 @@ class RuntimeMatrixTests(unittest.TestCase):
             with self.assertRaises(b2_notify.B2Error) as error:
                 b2_notify.LocalConfig.load(path)
             self.assertEqual(error.exception.code, "CONFIG_INVALID")
+
+    def test_rev01_local_config_version_requires_actual_integer_one(self):
+        base = {
+            "version": 1,
+            "dispatch_enabled": False,
+            "notification_only": True,
+            "repository": "zyyu1/personal-workspace",
+            "expected_author": "zyyu1",
+            "expected_user": getpass.getuser(),
+            "thread_uuid": THREAD_UUID,
+            "codex_executable": "C:/Program Files/OpenAI/codex.exe",
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.json"
+            for value in [True, False, 1.0, "1", None, 0, -1]:
+                with self.subTest(value=value):
+                    payload = dict(base, version=value)
+                    path.write_text(json.dumps(payload), encoding="utf-8")
+                    with self.assertRaises(b2_notify.B2Error) as error:
+                        b2_notify.LocalConfig.load(path)
+                    self.assertEqual(error.exception.code, "CONFIG_INVALID")
+            path.write_text(json.dumps(base), encoding="utf-8")
+            self.assertEqual(b2_notify.LocalConfig.load(path).dispatch_enabled, False)
+
+    def test_rev01_local_config_flags_and_identity_fields_require_exact_types(self):
+        base = {
+            "version": 1,
+            "dispatch_enabled": False,
+            "notification_only": True,
+            "repository": "zyyu1/personal-workspace",
+            "expected_author": "zyyu1",
+            "expected_user": getpass.getuser(),
+            "thread_uuid": THREAD_UUID,
+            "codex_executable": "C:/Program Files/OpenAI/codex.exe",
+        }
+        invalid = {
+            "dispatch_enabled": 0,
+            "notification_only": 1,
+            "repository": None,
+            "expected_author": True,
+            "expected_user": 1.0,
+            "thread_uuid": [],
+            "codex_executable": 7,
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "config.json"
+            for field, value in invalid.items():
+                with self.subTest(field=field, value=value):
+                    path.write_text(json.dumps(dict(base, **{field: value})), encoding="utf-8")
+                    with self.assertRaises(b2_notify.B2Error) as error:
+                        b2_notify.LocalConfig.load(path)
+                    self.assertEqual(error.exception.code, "CONFIG_INVALID")
 
 
 if __name__ == "__main__":
