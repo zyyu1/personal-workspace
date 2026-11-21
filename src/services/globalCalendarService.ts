@@ -29,7 +29,11 @@ const safeSourceUrl=(value?:string)=>{if(!value)return undefined;try{return pars
 export const GlobalCalendarService={
   async query(filters?:{projectId?:string;sourceType?:CalendarItem['sourceType']|'all'}){
     const projectId=filters?.projectId??'adaptive-agents'
-    const [tasks,planning,submissions,assessments]=await Promise.all([GlobalTaskService.list(projectId),PlanningService.getSnapshot(projectId),SubmissionService.getSnapshot(projectId),StudyCourseService.listVerifiedAssessments(projectId)])
+    const offerings=await StudyCourseService.listOfferings(),isStudy=offerings.some(row=>row.offering.id===projectId)
+    const tasks=await GlobalTaskService.list(projectId)
+    const planning=isStudy?{events:[]}:await PlanningService.getSnapshot(projectId)
+    const submissions=isStudy?{targets:[],opportunities:[],venues:[],evidence:[],deadlines:[]}:await SubmissionService.getSnapshot(projectId)
+    const assessments=isStudy?await StudyCourseService.listVerifiedAssessments(projectId):[]
     const items:CalendarItem[]=[]
     for(const task of tasks){
       const taskRoute=task.area==='study'?`/tasks?task=${encodeURIComponent(task.id)}`:`/research/projects/${projectId}/tasks?task=${encodeURIComponent(task.id)}`

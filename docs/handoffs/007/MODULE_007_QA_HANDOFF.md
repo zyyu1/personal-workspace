@@ -1,116 +1,104 @@
-# Module 007 QA Handoff
+# Module 007 Remediation Revision 01 — QA Handoff
 
 ## Candidate
 
 - Branch: `codex/module-007`
-- Base: `febcc3429af0938b010e184d6b851fb226b59678` (`origin/main` at implementation start)
-- Scope: Study Course Overview V1.0 only
-- Frozen inputs: `DESIGN_APPROVED.md`, `EXECUTION_INSTRUCTION.md`
-- OSS review: `OSS_REUSE_REVIEW.md`
-- QA mode: Review Only; do not modify the candidate
+- Remediation base: `7a670f77848e752855dd277c7e9af5850b4006f2`
+- PR: https://github.com/zyyu1/personal-workspace/pull/15
+- Authority: `docs/handoffs/007/MODULE_007_REMEDIATION_REV01.md` on `origin/main`
+- Scope: M007-QA-001 through M007-QA-005 only
+- QA mode: Review Only; do not modify or merge the candidate
 
-The final candidate commit and PR URL are added to the GitHub PR description after push.
+The exact candidate HEAD is posted to PR #15 after this handoff and the remediation commit are pushed.
 
-## Architecture and reuse
+## Remediation summary
 
-```text
-Course 1 ── * CourseOffering
-                 ├── Study repository: Source / Import / Entry / Progress / Assessment
-                 ├── canonical Resource ── ResourceLink(course-offering)
-                 ├── canonical Task(area=study, projectId=offeringId)
-                 ├── canonical TimeEntry(projectId=offeringId)
-                 ├── verified Assessment ── Global Calendar query projection
-                 └── WorkspaceResumeContext(area=study)
-```
+| Issue | Result | Implementation evidence |
+| --- | --- | --- |
+| M007-QA-001 | FIXED | `StudyCourseService.unlinkResource` validates Offering ownership and mutates only entries belonging to that Offering's source IDs. Shared Resource, other Offering entries/links and progress remain intact. |
+| M007-QA-002 | FIXED | Manifest reconciliation deduplicates all incoming paths (including rejected paths and directories), reuses stable Entry IDs, handles safe/rejected/missing transitions, and preserves prior available rows on partial Resource write failure. |
+| M007-QA-003 | FIXED | Global Calendar project selector loads canonical CourseOfferings, exposes `assessment-deadline`, queries Study without Research Planning/Submission assumptions, and projects only verified dated assessments. |
+| M007-QA-004 | FIXED | Shared area-aware route helpers send Study project links to Course Overview and Study resource links to Course Materials; Research routes are unchanged. Task Inspector copy and stage label are area aware. |
+| M007-QA-005 | FIXED | Mobile timer keeps Pause/Resume, Finish & save and Discard visible. Import wizard is viewport-fixed, Escape-safe while idle, focuses Close, and restores the actual launch control. |
 
-The versioned `study-courses` repository uses the A01 persistence adapter and seed/version behavior. Global Resource, Task, Calendar, TimeEntry, Timer and Resume services remain authoritative. No Study-specific copies of these entities were introduced.
+No new Task, Resource, Calendar, Timer, TimeEntry or Study domain store was introduced. IndexedDB/versioned repository behavior and ZIP safety bounds remain unchanged.
 
-## Implemented surfaces
+## Regression coverage
 
-- `/study/courses`
-- `/study/courses/:courseOfferingId/overview`
-- `/study/courses/:courseOfferingId/materials`
-- Course and semester Offering identity separation
-- Overview cards backed by canonical queries and honest unknown states
-- folder-handle manifest preview and ZIP manifest preview, both user initiated
-- preview-before-confirm, index-only persistence, manual classification, rescan identity
-- existing canonical Resource linking without copying the Resource
-- shared `InspectorShell`, canonical study task, timer context and resume context
-- verified-only Study assessment projection into Global Calendar
-- explicit future state for Tasks, Exercises, Exams, Labs and Notes tabs
+`src/features/study/Study.test.tsx` now contains 31 tests. Revision 01 adds:
 
-## Security and availability model
+1. shared canonical Resource across Winter/Summer Offerings; unlink one and persist the other link/progress;
+2. imported Resource in one Offering plus manual link in another;
+3. repeated/reordered manifest reconciliation and rejected → safe / safe → rejected / removed → missing transitions with stable IDs;
+4. partial Resource upsert diagnostic with prior row preservation;
+5. verified Study assessment Calendar query and safe canonical route;
+6. Calendar UI CourseOffering/source selector;
+7. area-aware Study and Research project/resource routing, including rendered Global Tasks and Task Inspector links;
+8. material wizard Escape close and launch-focus restoration.
 
-- ZIP source: 250 MB; 5,000 entries; 2 GB declared expanded total; 250 MB per entry; compression ratio 200; depth 30.
-- rejects traversal, absolute/drive/UNC/backslash paths, encrypted entries, symlinks/special files, unsupported compression methods and undecodable replacement characters.
-- entries are never extracted, executed or uploaded.
-- indexed metadata and current-device byte availability are separate. ZIP/folder resources become `permission-required` after persistence.
-- external opening is allowed only through `GlobalResourceService.openOriginal`, which revalidates HTTP/HTTPS.
-- Managed Import and cross-device file availability remain disabled.
+Existing traversal, drive/UNC, symlink, ZIP-bomb ratio, index-only, IndexedDB/canonical identity and modules 001–006 regression tests remain in the full suite.
 
-## Test evidence
-
-Commands run on Windows:
+## Command evidence
 
 | Command | Result |
 | --- | --- |
 | `npm run typecheck` | PASS |
-| `npm run lint` | PASS with 12 pre-existing warnings in modules 001–006; 0 errors, 0 Module 007 warnings |
-| `npm run build` | PASS; CourseLibrary 3.72 kB, Study service 8.38 kB, CourseWorkspace 153.38 kB (uncompressed chunks) |
-| `npm test -- --run` | PASS, 10 files / 126 tests |
-| `git diff --check` | PASS (Git line-ending notices only) |
+| `npm run lint` | PASS, 0 errors; 12 pre-existing warnings in modules 001–006 |
+| `npm run build` | PASS; production chunks generated |
+| `npm test -- --run` | PASS, 10 files / 135 tests |
+| `npm test -- --run src/features/study/Study.test.tsx` | PASS, 31/31 |
+| `git diff --check` | PASS; Git CRLF notices only |
 
-Module tests: `src/features/study/Study.test.tsx` (22 tests). They cover Memory Adapter identities, idempotent rescan, manual classification, Resource linking/unlinking, Global Task identity, verified-only Calendar projection, Study Time isolation, Resume, folder fixture, real in-memory ZIP parsing, traversal, symlink and compression-ratio fixtures, and UI truth states.
+## Browser evidence
 
-Interactive browser evidence:
+- Active timer at the mobile breakpoint exposes visible `Pause`, `Finish & save` and `Discard` controls; measured button rectangles are inside the fixed timer.
+- Material wizard measured exactly to the effective viewport bounds, did not exceed the viewport, closed with Escape and restored focus to `Add / refresh materials`.
+- Effective 787px and 1107px browser surfaces reported no horizontal document overflow.
+- The in-app browser constrained requested 390/1024/1440 viewports to smaller effective sizes. Exact-dimension screenshot certification remains an independent QA task and is not claimed as complete E2E evidence.
+- A real Windows directory picker was not authorized or exercised. Acceptance item 4 remains PARTIAL.
 
-- IndexedDB/browser reload: linked canonical `baseline-results.csv`, reloaded, and observed the same Resource entry.
-- responsive observations had no document overflow at effective widths 1107, 787 and 412 pixels. At the mobile breakpoint, the import wizard and Inspector are fullscreen; Escape closed Inspector and retained the Materials route.
-- exact 1440/1024/390 automated screenshot artifacts are not attached because standalone headless Edge captured the async loading frame. Independent QA should capture exact dimensions in its browser runner. This is not represented as E2E screenshot PASS.
-- actual Windows directory permission was not granted during development; folder behavior is covered by a reproducible handle fixture and must not be described as Local Connector verification.
-
-## Acceptance matrix
+## 24-item acceptance matrix
 
 | # | Result | Evidence / limitation |
 | ---: | --- | --- |
-| 1 | PASS | Course/Offering service test and independent Offering state |
-| 2 | PASS | Overview browser check and canonical service queries |
-| 3 | PASS | `ECTS unknown`, `Date unknown`, no inferred progress |
-| 4 | PARTIAL | bounded explicit-handle fixture passes; real Windows picker not granted in development |
-| 5 | PASS | unsupported browser/permission/managed-storage states are explicit |
-| 6 | PASS | real in-memory zip.js archive preview test |
-| 7 | PASS | wizard requires preview and explicit Confirm; no write/extract operation exists |
-| 8 | PASS | traversal variants, symlink and compression-ratio tests |
-| 9 | PASS | relative path/source ID persisted; tree sorting preserves hierarchy |
-| 10 | PASS | suggestion plus manual persistent override/rescan test |
-| 11 | PASS | past-paper assessment regression test |
-| 12 | PASS | Global Resource stable ID and existing-resource idempotency test |
-| 13 | PASS | same-source double import does not duplicate Resource/Entry |
-| 14 | PASS | missing entries retain IDs; progress/task links live on canonical Resource |
-| 15 | PASS | metadata sync and byte availability are distinct fields and UI labels |
-| 16 | PASS | Open Original disabled without verified provider availability |
-| 17 | PASS | canonical Global Task ID/service test |
-| 18 | PASS | separate repositories/queries; verified assessments only reach Calendar |
-| 19 | PASS | Study Resume test; Continue never starts timer |
-| 20 | PASS | no extraction or execution API in import path |
-| 21 | PASS | unsafe/per-entry failures and partial/failed status retained |
-| 22 | PARTIAL | responsive live checks passed at effective 1107/787/412; exact screenshot artifacts need independent QA |
-| 23 | PASS | commands above |
-| 24 | PASS | only Module 007; future tabs are inert and labeled FUTURE |
+| 1 | PASS | Course and term-specific CourseOffering identities remain separate. |
+| 2 | PASS | Course Overview reads canonical Study, Resource, Task and Time data. |
+| 3 | PASS | Unknown ECTS/date/progress states remain explicit. |
+| 4 | PARTIAL | Explicit handle fixture passes; no genuine Windows picker evidence. |
+| 5 | PASS | Unsupported picker, permission and managed-storage states are explicit. |
+| 6 | PASS | Real in-memory zip.js central-directory preview remains covered. |
+| 7 | PASS | Preview and explicit Confirm remain required; no extraction/upload. |
+| 8 | PASS | ZIP traversal, symlink and compression-ratio protections remain green. |
+| 9 | PASS | All incoming paths reconcile once per source/path with stable identity. |
+| 10 | PASS | Manual classification persists across reorder/rescan. |
+| 11 | PASS | Past-paper filenames do not create assessments. |
+| 12 | PASS | Shared canonical Resource survives cross-Offering unlink. |
+| 13 | PASS | Repeated/reordered imports do not duplicate Resource/Entry. |
+| 14 | PASS | Removed paths become missing; other Offering links/progress persist. |
+| 15 | PASS | Metadata sync and device byte availability stay distinct. |
+| 16 | PASS | Open Original remains guarded by Global Resource capability. |
+| 17 | PASS | Study tasks retain canonical Global Task IDs. |
+| 18 | PASS | Verified dated assessments reach Calendar once; unverified do not. |
+| 19 | PASS | Study Resume remains opt-in and does not start Timer. |
+| 20 | PASS | Import path still has no extraction/execution API. |
+| 21 | PASS | Rejected paths and partial upsert failures retain truthful diagnostics. |
+| 22 | PARTIAL | Mobile behavior and effective-width overflow checks pass; exact 1440/1024/390 capture remains for independent QA. |
+| 23 | PASS | Typecheck, lint, build, 135 tests and diff check pass. |
+| 24 | PASS | Scope limited to Revision 01; Module 008/B2B/B3/Queue untouched. |
 
-## Independent QA requests
+## Independent QA focus
 
-1. Re-run all commands and inspect the candidate diff for scope.
-2. Use a real browser IndexedDB profile, reload after create/import/task/progress operations, and verify IDs persist.
-3. Capture exact 1440, 1024 and 390 screenshots and inspect horizontal overflow/focus behavior.
-4. With a disposable fixture directory, invoke the real browser directory picker and confirm only the chosen tree is indexed. Do not treat it as Local Connector or persistent byte access.
-5. Re-run malicious ZIP fixtures including traversal, drive/UNC, symlink, encrypted, high-ratio and limit failures.
-6. Confirm modules 001–006, Global Tasks, Calendar, Timer, Resources and Resume remain functional.
-7. Return `ACCEPTED / ACCEPTED WITH FIXES / REJECTED / INSUFFICIENT EVIDENCE`, with severity, file/line evidence and minimal fixes.
+1. Reproduce all five original defects against base `7a670f7`, then verify the candidate fixes.
+2. Inspect cross-Offering unlink with imported/manual combinations and reload persistence.
+3. Exercise manifest repeat/reorder and every status transition; assert one Entry per source/path.
+4. Verify Study Calendar selection, verified-only assessment inclusion, Research Calendar regression, and loading/error/empty states.
+5. Verify rendered Global Tasks and Task Inspector routes for Study and Research.
+6. Capture exact 390×844, 1024 and 1440 layouts; confirm timer Finish/Discard and wizard focus behavior.
+7. Keep real Windows directory authorization PARTIAL unless genuine disposable-folder evidence is obtained.
+8. Re-run the full suite and return `ACCEPTED / ACCEPTED WITH FIXES / REJECTED / INSUFFICIENT EVIDENCE`.
 
 ## Known limitations
 
-- no Local Connector, Managed Storage, LMS connector, cloud sync or persistent browser file handle.
-- no extraction, PDF content search, OCR or automatic classification beyond filename/path suggestions.
-- directory enumeration and ZIP central-directory parsing currently run on the UI thread; configured bounds reduce exposure, but worker offloading is a future performance enhancement.
-- cross-repository ResourceLink + Study Entry writes are recoverable/idempotent but not one atomic transaction, matching the documented A01 adapter limitation.
+- No Local Connector, Managed Storage, LMS connector, cloud sync or persistent browser file handle.
+- Cross-repository ResourceLink + Study Entry writes are not one atomic transaction, consistent with the documented A01 adapter limitation.
+- Directory enumeration and ZIP central-directory parsing still run on the UI thread within configured safety bounds.
