@@ -1,5 +1,5 @@
 import { GlobalTaskService } from '../../../../services/globalTaskService'
-import type { ResearchTask, TimeEntry } from '../../types'
+import type { TimeEntry } from '../../types'
 import type { FixedCalendarEvent, PlanningSnapshot, ResearchMilestone, ResearchStage, ReviewRow } from '../types'
 import { SubmissionService } from '../../submissions/services/submissionService'
 import { createVersionedRepository, notFoundFailure, stableId, unwrapMutation } from '../../../../data/persistence'
@@ -51,14 +51,14 @@ export const PlanningService={
   async updateMilestone(id:string,values:Partial<Pick<ResearchMilestone,'title'|'date'|'stageId'>>){const result=await repository.mutate(state=>{if(!state.milestones.some(item=>item.id===id))throw notFoundFailure('Milestone not found');const milestones=state.milestones.map(item=>item.id===id?{...item,...values}:item);return{state:{...state,milestones},value:milestones.find(item=>item.id===id)!}});return unwrapMutation(result)},
   reviewByTask(snapshot:PlanningSnapshot):ReviewRow[]{
     const uniqueEntries=[...new Map(snapshot.timeEntries.map(entry=>[entry.id,entry])).values()]
-    return snapshot.tasks.map(task=>({key:task.id,label:task.title,plannedMinutes:(task.plannedSessions??[]).reduce((sum,item)=>sum+duration(item.start,item.end),0),actualMinutes:uniqueEntries.filter(entry=>entry.taskId===task.id).reduce((sum,item)=>sum+item.minutes,0)})).filter(row=>row.plannedMinutes||row.actualMinutes)
+    return snapshot.tasks.map(task=>({key:task.id,label:task.title,plannedMinutes:(task.plannedSessions??[]).reduce((sum,item)=>sum+duration(item.start,item.end),0),actualMinutes:uniqueEntries.filter(entry=>entry.taskId===task.id).reduce((sum,item)=>sum+(item.durationSeconds??item.minutes*60)/60,0)})).filter(row=>row.plannedMinutes||row.actualMinutes)
   },
   reviewByStage(snapshot:PlanningSnapshot):ReviewRow[]{
     const taskStage=new Map(snapshot.tasks.map(task=>[task.id,task.stage]));const uniqueEntries=[...new Map(snapshot.timeEntries.map(entry=>[entry.id,entry])).values()]
-    return snapshot.stages.map(stage=>({key:stage.id,label:stage.name,plannedMinutes:snapshot.tasks.filter(task=>task.stage===stage.name).flatMap(task=>task.plannedSessions??[]).reduce((sum,item)=>sum+duration(item.start,item.end),0),actualMinutes:uniqueEntries.filter(entry=>entry.stageId===stage.id||taskStage.get(entry.taskId??'')===stage.name).reduce((sum,item)=>sum+item.minutes,0)}))
+    return snapshot.stages.map(stage=>({key:stage.id,label:stage.name,plannedMinutes:snapshot.tasks.filter(task=>task.stage===stage.name).flatMap(task=>task.plannedSessions??[]).reduce((sum,item)=>sum+duration(item.start,item.end),0),actualMinutes:uniqueEntries.filter(entry=>entry.stageId===stage.id||taskStage.get(entry.taskId??'')===stage.name).reduce((sum,item)=>sum+(item.durationSeconds??item.minutes*60)/60,0)}))
   },
   reviewByDate(snapshot:PlanningSnapshot):ReviewRow[]{
-    const rows=new Map<string,ReviewRow>();for(const task of snapshot.tasks)for(const item of task.plannedSessions??[]){const date=item.start.slice(0,10);const row=rows.get(date)??{key:date,label:date,plannedMinutes:0,actualMinutes:0};row.plannedMinutes+=duration(item.start,item.end);rows.set(date,row)}for(const item of new Map(snapshot.timeEntries.map(entry=>[entry.id,entry])).values()){const row=rows.get(item.date)??{key:item.date,label:item.date,plannedMinutes:0,actualMinutes:0};row.actualMinutes+=item.minutes;rows.set(item.date,row)}return[...rows.values()].sort((a,b)=>a.key.localeCompare(b.key))
+    const rows=new Map<string,ReviewRow>();for(const task of snapshot.tasks)for(const item of task.plannedSessions??[]){const date=item.start.slice(0,10);const row=rows.get(date)??{key:date,label:date,plannedMinutes:0,actualMinutes:0};row.plannedMinutes+=duration(item.start,item.end);rows.set(date,row)}for(const item of new Map(snapshot.timeEntries.map(entry=>[entry.id,entry])).values()){const row=rows.get(item.date)??{key:item.date,label:item.date,plannedMinutes:0,actualMinutes:0};row.actualMinutes+=(item.durationSeconds??item.minutes*60)/60;rows.set(item.date,row)}return[...rows.values()].sort((a,b)=>a.key.localeCompare(b.key))
   },
   async reset(){await repository.reset();await GlobalTaskService.reset();await TimeEntryService.reset()},
   invalidate(){repository.invalidate()},

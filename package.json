@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
+    "lint": "eslint src",
     "test": "vitest run"
   },
   "dependencies": {
@@ -22,8 +23,11 @@
     "@testing-library/react": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
+    "eslint": "^10.15.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "jsdom": "latest",
     "typescript": "latest",
+    "typescript-eslint": "^8.73.0",
     "vite": "latest",
     "vitest": "latest"
   }

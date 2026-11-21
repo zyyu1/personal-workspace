@@ -17,6 +17,7 @@ export interface ResearchTask {
   dueDate?: string
   priority?: Priority
   projectId?: string
+  area?: 'research'|'study'|'work'
   taskType?: TaskType
   paperIds?: string[]
   resourceLinks?: TaskResourceLink[]
@@ -77,5 +78,5 @@ export interface ResearchProject {
   literature: LiteratureItem[]
   milestones: ProjectMilestone[]
   continueContext: ContinueContext
-  timeEntries: Array<{ id: string; date: string; minutes: number }>
+  timeEntries: TimeEntry[]
 }
