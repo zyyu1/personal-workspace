@@ -1,0 +1,15 @@
+# B2A OSS Reuse Review — 2026-11-21
+
+This read-only review was refreshed immediately before B2A implementation. Star counts are time-sensitive snapshots; commit SHAs and licenses are the stronger reproducible evidence.
+
+| Project | Snapshot | License / stack | Windows deployment | Safe reuse | Adaptation cost and risk |
+| --- | --- | --- | --- | --- | --- |
+| [openai/codex](https://github.com/openai/codex) | 136,039 stars; latest observed commit [`1145028`](https://github.com/openai/codex/commit/1145028ae47e8119955323d38ce34122d418f951), 2026-11-21 08:39 UTC | Apache-2.0; Rust | Low to invoke the already installed official CLI; high and unnecessary to fork | Use only the documented installed `codex queue --thread --message` argument interface. The local CLI reported `codex-cli 0.171.0-alpha.13`; help was read without sending. | Queue exit zero is not ACK, thread availability is version-sensitive, and unrestricted CLI options would widen authority. B2A pins the executable and constructs a fixed argument array without `--resume`, `--last`, config overrides or remote endpoints. |
+| [cli/cli](https://github.com/cli/cli) | 47,124 stars; latest observed commit [`de06af2`](https://github.com/cli/cli/commit/de06af2c2ea536d5722fda35dc2001565f9b9f64), 2026-11-20 13:14 UTC | MIT; Go | Low; official `gh` 2.105.0 is already installed/authenticated | Reuse the accepted B1 `GhApiClient` GET-only transport, strict UTF-8 byte handling, file identity and bounded pagination. | Token scope, rate limits and CLI availability remain operational risks. No new token, broad scope, GitHub write method or duplicate transport is introduced. |
+| [songyb111-gachon/codex-auto-resume-windows](https://github.com/songyb111-gachon/codex-auto-resume-windows) | 93 stars; latest observed commit [`e404d15`](https://github.com/songyb111-gachon/codex-auto-resume-windows/commit/e404d15f36807e270d20c236490089dac221f9be), 2026-11-21 13:21 UTC | MIT; Python | Medium–high because it is an independent Windows application/daemon-oriented workflow | Operational reference only. Do not install, fork, import or copy its runtime. | It solves quota auto-resume rather than authenticated notification authorization. Its daemon/UI/session coupling conflicts with B2A's foreground, default-off, no-background boundary. |
+
+## Decision
+
+B2A needs no new dependency or framework. It reuses the official installed Codex CLI as a narrowly wrapped transport and the existing QA-accepted B1 GitHub reader. The local sender, strict notification policy, durable write-ahead state and lock are small standard-library Python components. The Windows auto-resume repository is not an implementation dependency.
+
+Residual risks remain explicit: one GitHub account controls both Issue labels and authorization records unless branch protection/review is enforced; queue submission is not delivery; Windows user-directory ACL strength is an operating-system policy rather than a cryptographic guarantee; and a real same-thread ACK remains unverified until a separately authorized host probe.
