@@ -36,7 +36,7 @@ export function MiniTimer({ running, label, seconds, onToggle, onStop }: { runni
   return <div className={`mini-timer ${running ? 'running' : ''}`}>
     <div><span className="eyebrow">Focus timer</span><strong>{label ?? 'No active task'}</strong></div>
     <time>{mm}:{ss}</time>
-    <button className="timer-toggle" onClick={onToggle}><Clock3 size={16}/>{running ? 'Pause' : 'Start'}</button>
+    <button className="timer-toggle" onClick={onToggle} disabled={!label}><Clock3 size={16}/>{running ? 'Pause' : 'Start'}</button>
     {seconds > 0 && <button className="timer-stop" onClick={onStop}>Finish</button>}
   </div>
 }
