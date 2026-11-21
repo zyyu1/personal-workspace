@@ -5,11 +5,11 @@
 - **Design:** APPROVED / DESIGN FROZEN (confirmed 2026-11-21)
 - **Design Source:** `docs/handoffs/008/DESIGN_APPROVED.md`
 - **Execution Instruction:** `docs/handoffs/008/EXECUTION_INSTRUCTION.md`
-- **Implementation:** **IMPLEMENTED / PR #18 OPEN** on `codex/module-008`; implementation commit `f5c5b003fe979eb5d253f075f660c771ee2c928a`. Awaiting independent Review Only QA and Design Window disposition; not merged.
-- **QA:** PENDING — developer self-check is not acceptance. See `QA_HANDOFF.md`.
+- **Implementation:** **REVISION 01 IMPLEMENTED / PR #18 OPEN / MERGE HOLD** on `codex/module-008`; original implementation `f5c5b003fe979eb5d253f075f660c771ee2c928a`, rejected candidate `e31502bb346b38c0a559519f97b829da22c963ae`, remediation code `f61fed69b352a93c3f4325ed50381bd363cbb863`. Not merged.
+- **QA:** Initial independent QA **REJECTED** (26 PASS / 1 PARTIAL / 3 FAIL). Revision 01 developer checks pass; fresh independent Review Only QA is pending. See `QA_HANDOFF.md` and PR #18 comments.
 - **Prerequisite:** **FULFILLED** — Module 007 code accepted at `1c35753804e6b99f2dc620756e4a8dce70f7292c`, PR #15 MERGED `cd2c7145b2a27a7b7e2815b9ad4eea53a6416b08`, native Windows folder-picker Rev03 independently ACCEPTED, matrix **24/24 PASS**, Issue #16 CLOSED. Accepted actual 007 interface map documented in `MODULE_008_START_AUTHORIZATION.md`.
 - **Shared Platform Baseline:** `dc829a9f69d2a31c1b3b3eb2429fe0124cc9d237` (A01 gate; NOT a substitute for 007 implementation baseline)
-- **Next Action:** Interactive Windows Development Window reads frozen 008 design, execution instruction, explicit Module 008 start authority and actual 007 interface map; verifies clean accepted main; implements **only Module 008** on a fresh `codex/module-008` branch; submits PR+QA handoff, then stops for independent Review Only QA. No automatic Windows dispatch.
+- **Next Action:** Independent QA reviews the exact Revision 01 PR HEAD in Review Only mode, re-runs the full 30-row matrix and publishes its decision to PR #18 and Issue #17. Development and merge remain stopped meanwhile.
 - **Handoff Publication:** COMPLETE
 - **Implementation Authorization:** **ACTIVE FOR MODULE 008 CODE ONLY** — `MODULE_008_START_AUTHORIZATION.md` and Issue #17. No source edits or execution have occurred in this Design Window; no QA/merge or Module 009 authority.
 
@@ -57,3 +57,12 @@ This is a dependency-state correction only; it does **not** activate the earlier
 - **Other workstreams:** B2B paused/on-demand only; B3 and real Codex Queue NOT AUTHORIZED. GitHub publication does not wake the Windows computer or Codex Desktop.
 
 All earlier `NOT STARTED / BLOCKED` statements are historical records from before Module 007 host QA and this separate authorization; they are superseded only as to **permission to begin Module 008 coding**, not as to actual code/QA completion.
+
+## Module 008 Remediation Revision 01 — Current Candidate (2026-11-21)
+
+- Initial candidate `e31502bb346b38c0a559519f97b829da22c963ae` was independently **REJECTED** with findings M008-QA-001 through M008-QA-005. Historical QA evidence remains at PR #18 and is not rewritten as a pass.
+- Design Window authorized only the targeted Revision 01 in `MODULE_008_REMEDIATION_REV01.md` on main commit `9867779c1bf9efe40c255540ecac28ba204c749a`.
+- Remediation code commit: `f61fed69b352a93c3f4325ed50381bd363cbb863`. It addresses partial-patch metadata preservation, concurrent canonical Task idempotency/recovery, complete Overview progress projection, and Inspector focus restoration.
+- Actual checks: TypeScript PASS; Lint PASS with the same 12 pre-existing Research warnings; Build PASS; 11 files / 160 tests PASS; `git diff --check` PASS; browser 1440×900, 1024×768 and 390×844 PASS without horizontal overflow.
+- The exact final candidate HEAD is published in a PR #18 Review Only request after the documentation commit and is the only independent-QA anchor. Developer self-check is not QA acceptance.
+- **Current gate:** FRESH INDEPENDENT QA PENDING / MERGE HOLD / NO MODULE 009 OR 010 AUTHORIZATION.
