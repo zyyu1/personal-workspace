@@ -9,7 +9,7 @@
 - **B2A Implementation:** **CODE ACCEPTED / MERGED INTO `main`** — PR #9 Revision 01 accepted candidate `cba80fa7eabb55abf0c928e68ddad622e38a6516`, merge commit `ca68d1c1f952b3766647e2810e72483dfd5cef2c`; default-disabled notification sender, not running automatically
 - **B2A Independent QA:** **ACCEPTED FOR CODE** — Revision 01 23 PASS / 0 FAIL / 1 NOT VERIFIED; original candidate REJECTED, B2A-QA-001 High CLOSED. QA: https://github.com/zyyu1/personal-workspace/pull/9#issuecomment-7064087898
 - **B2A Real Windows Host Queue Probe:** **PASS / MANUAL SAME-THREAD ACK ACCEPTED (2026-11-21)** — one authorized queue submission (`QUEUE_SUBMITTED`, exit 0) was followed by the user's exact matching nonce ACK pasted into the Design Window chat and explicit confirmation that they observed/copied it from the original Windows Codex Desktop execution thread. This is **human-attested** evidence, not machine-verified Codex telemetry. Acceptance: https://github.com/zyyu1/personal-workspace/issues/10#issuecomment-7064353100. QA #24 ACCEPTED for the scoped one-shot probe. Approval label revoked; no resend or further dispatch authorized.
-- **B2B V1.1 On-Demand Bridge:** **DESIGN APPROVED / CODE-ONLY DEVELOPMENT AUTHORIZED** on 2026-11-21; user explicitly rejected unattended/scheduled polling. Approved design: `docs/dispatch/B2B_ON_DEMAND_DESIGN_APPROVED.md`; code-only instruction: `docs/dispatch/B2B_ON_DEMAND_EXECUTION_INSTRUCTION.md`; work order: Issue #12. Implementation/QA pending; **NO live queue, Windows shortcut installation or idle background process authorized**.
+- **B2B V1.1 On-Demand Bridge:** **DESIGN APPROVED / INITIAL CODE QA REJECTED / REVISION 01 TARGETED REMEDIATION AUTHORIZED** (2026-11-21). PR #13 rejected candidate `650ef85dce0549602ba20bd2d8f10835ee219e70`, High `B2B-QA-001` incomplete GitHub authorization snapshot fail-open; formal scope `docs/dispatch/B2B_ON_DEMAND_REMEDIATION_REV01.md`, independent re-review required. Issue #12 remains open; PR #13 OPEN/UNMERGED. **NO live queue, shortcut installation, background polling or B3 authorized**.
 - **B2B V1.0 Unattended Windows Polling:** REJECTED AS USER REQUIREMENT / NEVER AUTHORIZED / NOT INSTALLED
 - **B3 Automatic Implementation Routing:** NOT AUTHORIZED
 - **B0 Existing-Session Probe:** ACCEPTED — `codex queue` reached same original Windows Desktop thread, Issue #3
@@ -121,3 +121,17 @@ B2A PASS applies only to the one authorized supervised notification. It **does n
 - **Next action:** Existing Windows Codex development window reads Issue #12 and both approved source-of-truth documents, develops only code + mocks on new `codex/dispatch-b2b-on-demand` branch, requests independent Review Only QA and stops without merge or real send.
 
 **No background process, periodic listener or live Codex queue was activated by the B2B V1.1 design confirmation.**
+
+## B2B V1.1 Remediation Revision 01 — Code QA REJECTED (2026-11-21)
+
+- **Design authority:** `docs/dispatch/B2B_ON_DEMAND_DESIGN_APPROVED.md` (on-demand one-click, **not** background polling).
+- **Original code-only work order:** https://github.com/zyyu1/personal-workspace/issues/12
+- **Code PR:** https://github.com/zyyu1/personal-workspace/pull/13 — current original QA-reviewed HEAD `650ef85dce0549602ba20bd2d8f10835ee219e70`, initial implementation `ec884bae8dab9eb3b8b5c11f3310260796f8f309`, OPEN/UNMERGED at review.
+- **Independent QA:** https://github.com/zyyu1/personal-workspace/pull/13#issuecomment-7064833121 — **REJECTED**, High `B2B-QA-001`; QA matrix #11/#15/#16 FAIL, #28 NOT VERIFIED. Python 102/102 and Workspace 104/104 PASS did not include the missing adversarial coverage.
+- **Root cause:** `b2_on_demand._authorized_snapshot()` discarded the `NotifyResult(status="BLOCKED")` for a per-issue record/handoff read error; one valid Issue plus one unreadable Issue became a false singleton and could proceed through PREPARED/sender. QA independently reproduced sender=1 and state created. Applies to discovery and lock-internal fresh recheck.
+- **Formal authorized remediation:** [`docs/dispatch/B2B_ON_DEMAND_REMEDIATION_REV01.md`](https://github.com/zyyu1/personal-workspace/blob/main/docs/dispatch/B2B_ON_DEMAND_REMEDIATION_REV01.md). Entire snapshot fails closed on any BLOCKED/unknown/inconsistent validation; only true policy REJECTED may be skipped. Adversarial record/handoff GET failures in both phases must prove sender=0 and outbox unchanged.
+- **Allowed next action:** Development Window repairs the narrowly scoped finding **in same PR #13**, runs mock adversarial regression and requests new independent Review Only QA at a new exact HEAD. Design Window will separately decide acceptance/merge.
+- **Safety gates:** No actual `codex queue`, no local shortcut installation, no scheduler/watcher/service/autorun, no B3 routing, no Module 007/008 application changes. B2A accepted one-shot, Issue #10 CLOSED and Outbox preserved.
+- **Host QA matrix #28:** remains NOT VERIFIED until later explicit independent real-host stage authorization. Passing code QA alone will not enable any local receiver.
+
+**Current authoritative B2B state:** V1.1 **on-demand** product design approved, candidate **REJECTED**, Revision 01 remediation authorized, **implementation not accepted or merged**, local activation not authorized.
