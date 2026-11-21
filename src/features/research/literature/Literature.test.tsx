@@ -3,10 +3,18 @@ import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { App } from '../../../App'
 import { LiteratureService } from './services/literatureService'
+import { PaperInspector } from './components/PaperInspector'
 
 describe('Literature Library and Paper Inspector',()=>{
   beforeEach(()=>{vi.restoreAllMocks();LiteratureService.reset()})
   afterEach(cleanup)
+
+  it('does not render unsafe historical paper URLs as clickable links',async()=>{
+    const paper={...(await LiteratureService.getSnapshot()).papers[0],url:'file:///C:/private/paper.pdf'}
+    render(<MemoryRouter><PaperInspector paper={paper} projectId="adaptive-agents" onClose={()=>{}} onUpdate={async()=>{}} onCreateTask={async()=>{}} onStartTimer={()=>{}} onUnlink={async()=>{}}/></MemoryRouter>)
+    expect(screen.queryByRole('link',{name:/Open source URL/})).not.toBeInTheDocument()
+    expect(screen.getByText('Source URL unavailable')).toBeInTheDocument()
+  })
 
   it('deduplicates stable Zotero identities and keeps project reading state independent',async()=>{
     const snapshot=await LiteratureService.getSnapshot()
@@ -70,7 +78,8 @@ describe('Literature Library and Paper Inspector',()=>{
     view.unmount()
     vi.spyOn(LiteratureService,'getSnapshot').mockRejectedValueOnce(new Error('offline'))
     render(<MemoryRouter initialEntries={['/research/projects/adaptive-agents/literature']}><App/></MemoryRouter>)
-    expect(await screen.findByText('Literature library unavailable')).toBeInTheDocument()
+    expect(await screen.findByText('Project data unavailable')).toBeInTheDocument()
+    expect(screen.getByText('offline')).toBeInTheDocument()
   })
 
   it('supports stable paper deep links and project-owned reading updates',async()=>{

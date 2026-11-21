@@ -1,57 +1,26 @@
 import type { ResearchProject } from '../types'
-import { GlobalTaskService } from '../../../services/globalTaskService'
 import { SubmissionService } from '../submissions/services/submissionService'
+import { LiteratureService } from '../literature/services/literatureService'
+import { PlanningService } from '../planning/services/planningService'
 
-// Isolated adapter: replace this implementation with API calls without changing UI contracts.
-const demoProject: ResearchProject = {
+// Immutable project metadata only. Dynamic domain data is assembled from canonical services below.
+const projectMetadata: Pick<ResearchProject,'id'|'name'|'summary'|'status'|'tags'|'pinned'|'continueContext'> = {
   id: 'adaptive-agents',
   name: 'Adaptive Research Agents',
   summary: 'Investigating reliable adaptation strategies for research-oriented language agents.',
   status: 'active',
   tags: ['Demo data', 'Agent systems', 'Evaluation', 'Primary: Research'],
   pinned: true,
-  currentStage: 'Method design',
-  stages: [
-    { id: 's1', label: 'Literature review', state: 'complete', milestone: 'Research landscape mapped' },
-    { id: 's2', label: 'Method design', state: 'current', milestone: 'Evaluation protocol approved' },
-    { id: 's3', label: 'Experiments', state: 'upcoming', milestone: 'Baseline runs complete' },
-    { id: 's4', label: 'Paper writing', state: 'upcoming', milestone: 'Internal draft ready' },
-  ],
-  tasks: [
-    { id: 't1', title: 'Refine the evaluation protocol', status: 'in-progress', stage: 'Method design', dueDate: '2026-11-24', priority: 'high' },
-    { id: 't2', title: 'Compare memory baselines', status: 'todo', stage: 'Method design', dueDate: '2026-11-27', priority: 'medium' },
-    { id: 't3', title: 'Annotate failure-mode examples', status: 'todo', stage: 'Literature review', priority: 'medium' },
-    { id: 't4', title: 'Prepare pilot experiment config', status: 'blocked', stage: 'Experiments', priority: 'low' },
-  ],
-  literature: [
-    { id: 'p1', title: 'Reflexion: Language Agents with Verbal Reinforcement Learning', authors: 'Shinn et al.', year: 2023, readingStatus: 'reviewed', zoteroState: 'disconnected' },
-    { id: 'p2', title: 'Generative Agents: Interactive Simulacra of Human Behavior', authors: 'Park et al.', year: 2023, readingStatus: 'reading', zoteroState: 'disconnected' },
-    { id: 'p3', title: 'A Survey on Large Language Model based Autonomous Agents', authors: 'Wang et al.', year: 2024, readingStatus: 'unread', zoteroState: 'disconnected' },
-  ],
-  milestones: [
-    { id: 'm1', title: 'Evaluation protocol review', kind: 'stage', date: '2026-11-24', verification: 'internal' },
-    { id: 'm2', title: 'Pilot run checkpoint', kind: 'experiment', date: '2026-12-02', verification: 'internal' },
-    { id: 'm3', title: 'Internal methods draft', kind: 'writing', date: '2026-12-12', verification: 'internal' },
-    { id: 'm4', title: 'Target venue deadline', kind: 'submission', verification: 'unverified' },
-  ],
   continueContext: {
-    lastTask: { id: 't1', title: 'Refine the evaluation protocol', status: 'in-progress', stage: 'Method design', dueDate: '2026-11-24', priority: 'high' },
     note: { title: 'method-notes.md', available: false },
-    paper: { id: 'p2', title: 'Generative Agents: Interactive Simulacra of Human Behavior', authors: 'Park et al.', year: 2023, readingStatus: 'reading', zoteroState: 'disconnected' },
     repository: { label: 'adaptive-research-agents', state: 'disconnected' },
     localFolder: { label: 'Research / Adaptive Agents', available: false },
     nextAction: 'Finalize the metrics table, then attach it to the pilot experiment.',
   },
-  timeEntries: [
-    { id: 'e1', date: '2026-11-17', minutes: 72 },
-    { id: 'e2', date: '2026-11-18', minutes: 45 },
-    { id: 'e3', date: '2026-11-20', minutes: 88 },
-    { id: 'e4', date: '2026-11-21', minutes: 34 },
-  ],
 }
 
 const emptyProject: ResearchProject = {
-  ...demoProject,
+  ...projectMetadata,
   id: 'empty-project',
   name: 'New Research Project',
   summary: 'A clean project state for validating empty and disconnected experiences.',
@@ -65,13 +34,16 @@ export const ResearchProjectService = {
   async getProject(projectId: string): Promise<ResearchProject> {
     await new Promise((resolve) => setTimeout(resolve, 160))
     if (projectId === 'empty-project') return emptyProject
-    const submissionData=await SubmissionService.getSnapshot(projectId)
+    const [submissionData,literatureData,planning]=await Promise.all([SubmissionService.getSnapshot(projectId),LiteratureService.getSnapshot(),PlanningService.getSnapshot(projectId)])
     const linkedOpportunityIds=new Set(submissionData.targets.map(target=>target.opportunityId))
     const nextDeadline=submissionData.deadlines.filter(deadline=>linkedOpportunityIds.has(deadline.opportunityId)&&deadline.utcInstant).sort((a,b)=>a.utcInstant!.localeCompare(b.utcInstant!))[0]
     const opportunity=nextDeadline&&submissionData.opportunities.find(item=>item.id===nextDeadline.opportunityId)
     const venue=opportunity&&submissionData.venues.find(item=>item.id===opportunity.venueId)
     const evidence=nextDeadline?.evidenceId?submissionData.evidence.find(item=>item.id===nextDeadline.evidenceId):undefined
-    const milestones=nextDeadline?[...demoProject.milestones.filter(item=>item.kind!=='submission'),{id:nextDeadline.id,title:`${venue?.canonicalName} · ${nextDeadline.eventType} (Demo)`,kind:'submission' as const,date:nextDeadline.originalLocalDatetime?.slice(0,10),timezone:nextDeadline.originalTimezone,verification:'unverified' as const,sourceUrl:evidence?.url}]:demoProject.milestones
-    return {...demoProject,milestones,tasks:await GlobalTaskService.list(projectId)}
+    const milestones=nextDeadline?[...planning.milestones.filter(item=>item.kind!=='submission'),{id:nextDeadline.id,title:`${venue?.canonicalName} · ${nextDeadline.eventType} (Demo)`,kind:'submission' as const,date:nextDeadline.originalLocalDatetime?.slice(0,10),timezone:nextDeadline.originalTimezone,verification:nextDeadline.verificationStatus==='verified'?'verified' as const:'unverified' as const,sourceUrl:evidence?.url}]:planning.milestones
+    const literature=literatureData.papers.filter(paper=>paper.projectStates[projectId]).map(paper=>{const state=paper.projectStates[projectId];return{id:paper.stableId,title:paper.title,authors:paper.authors.join(', '),year:paper.year??0,readingStatus:state.readingStatus==='read'?'reviewed' as const:state.readingStatus==='reading'?'reading' as const:'unread' as const,zoteroState:literatureData.library.syncState==='synced'?'connected' as const:literatureData.library.syncState==='disconnected'?'disconnected' as const:'unavailable' as const,zoteroUrl:paper.url}})
+    const stages=planning.stages.map(stage=>({id:stage.id,label:stage.name,state:stage.status==='completed'?'complete' as const:stage.status==='active'?'current' as const:'upcoming' as const,milestone:planning.milestones.find(item=>item.stageId===stage.id)?.title}))
+    const activeStage=planning.stages.find(stage=>stage.status==='active')?.name??'Not configured',continuePaper=literature.find(item=>item.id==='demo-library:GENAG3')??literature[0]
+    return {...projectMetadata,currentStage:activeStage,stages,milestones,tasks:planning.tasks,literature,timeEntries:planning.timeEntries.map(({id,date,minutes})=>({id,date,minutes})),continueContext:{...projectMetadata.continueContext,lastTask:planning.tasks.find(task=>task.id==='t1')??planning.tasks[0],paper:continuePaper}}
   },
 }

@@ -27,8 +27,10 @@ function ProjectPage({timerControls}:{timerControls:TimerControls}) {
   const [searchParams,setSearchParams]=useSearchParams()
   const navigate=useNavigate()
   const [project,setProject]=useState<ResearchProject>()
+  const [projectError,setProjectError]=useState<string>()
   const [inspector,setInspector]=useState<InspectorItem>()
-  useEffect(()=>{setProject(undefined);setInspector(undefined);ResearchProjectService.getProject(projectId).then(setProject)},[projectId,section])
+  useEffect(()=>{let active=true;setProject(undefined);setProjectError(undefined);setInspector(undefined);ResearchProjectService.getProject(projectId).then(value=>{if(active)setProject(value)}).catch(error=>{if(active)setProjectError(error instanceof Error?error.message:'Project data is unavailable')});return()=>{active=false}},[projectId,section])
+  if(projectError)return <AppShell timer={timerControls.timer}><div className="library-state error"><h2>Project data unavailable</h2><p>{projectError}</p><button className="secondary-button" onClick={()=>location.reload()}>Retry</button></div></AppShell>
   if(!project)return <AppShell timer={timerControls.timer}><div className="loading-page"><span className="loading-line wide"/><span className="loading-line"/><div className="loading-grid"><span/><span/><span/></div></div></AppShell>
   const startTask=(task?:ResearchTask)=>{if(task)timerControls.start(task.title)}
   const inspectorPanel=inspector?<Inspector item={inspector} onClose={()=>setInspector(undefined)} onStartTimer={startTask}/>:undefined
@@ -60,10 +62,12 @@ export function App() {
   const [running,setRunning]=useState(false)
   const [seconds,setSeconds]=useState(0)
   const [pendingLabel,setPendingLabel]=useState<string>()
+  const [workspaceError,setWorkspaceError]=useState<string>()
   useEffect(()=>{if(!running)return;const id=window.setInterval(()=>setSeconds(value=>value+1),1000);return()=>clearInterval(id)},[running])
+  useEffect(()=>{const rejected=(event:PromiseRejectionEvent)=>{setWorkspaceError(event.reason instanceof Error?event.reason.message:'The change could not be saved.');event.preventDefault()};window.addEventListener('unhandledrejection',rejected);return()=>window.removeEventListener('unhandledrejection',rejected)},[])
   const start=(label:string)=>{if(activeLabel&&activeLabel!==label){setPendingLabel(label);return}setActiveLabel(label);setRunning(true)}
   const stop=()=>{setActiveLabel(undefined);setRunning(false);setSeconds(0)}
-  const timer=<MiniTimer running={running} label={activeLabel} seconds={seconds} onToggle={()=>activeLabel&&setRunning(!running)} onStop={stop}/>
+  const timer=<><MiniTimer running={running} label={activeLabel} seconds={seconds} onToggle={()=>activeLabel&&setRunning(!running)} onStop={stop}/>{workspaceError&&<div className="workspace-error" role="alert"><span><strong>Unable to save this change</strong>{workspaceError}</span><button onClick={()=>setWorkspaceError(undefined)}>Dismiss</button></div>}</>
   const timerControls={timer,start}
   return <><Routes><Route path="/research/projects/:projectId/:section/*" element={<ProjectPage timerControls={timerControls}/>}/><Route path="/research/literature" element={<GlobalLiteraturePage timerControls={timerControls}/>}/><Route path="/research/venues" element={<VenueExplorerPage timerControls={timerControls}/>}/><Route path="/research/venues/:venueId/opportunities/:opportunityId" element={<VenueDeepLinkPage timerControls={timerControls}/>}/><Route path="/research/submissions/:submissionId" element={<SubmissionDeepLinkPage timerControls={timerControls}/>}/><Route path="/resources" element={<GlobalResourcesPage timerControls={timerControls}/>}/><Route path="*" element={<Navigate to="/research/projects/adaptive-agents/overview" replace/>}/></Routes>{pendingLabel&&<div className="modal-backdrop"><div className="switch-timer-dialog" role="dialog" aria-modal="true" aria-labelledby="switch-timer-title"><span className="eyebrow">One timer at a time</span><h2 id="switch-timer-title">Switch active timer?</h2><p>Finish the current entry for <strong>{activeLabel}</strong> and start <strong>{pendingLabel}</strong>.</p><div><button className="secondary-button" onClick={()=>setPendingLabel(undefined)}>Keep current</button><button className="primary-button" onClick={()=>{setActiveLabel(pendingLabel);setSeconds(0);setRunning(true);setPendingLabel(undefined)}}>Switch timer</button></div></div></div>}</>
 }

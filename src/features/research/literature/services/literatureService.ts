@@ -2,6 +2,8 @@ import type { Priority, ResearchTask } from '../../types'
 import { DisconnectedZoteroConnector } from './zoteroConnector'
 import { paperStableId, type LiteraturePaper, type LiteratureSnapshot, type ReadingStatus } from '../types'
 import { GlobalTaskService } from '../../../../services/globalTaskService'
+import { GlobalResourceService } from '../../../../services/globalResourceService'
+import { createVersionedRepository, notFoundFailure, unwrapMutation } from '../../../../data/persistence'
 
 const sharedPaper = (overrides: Partial<LiteraturePaper> & Pick<LiteraturePaper, 'itemKey' | 'title'>): LiteraturePaper => ({
   stableId: paperStableId('demo-library', overrides.itemKey), libraryId: 'demo-library', authors: [],
@@ -33,30 +35,33 @@ const snapshot: LiteratureSnapshot = {
 }
 
 const connector = new DisconnectedZoteroConnector(snapshot)
-let papers = structuredClone(initialPapers)
+const copy=<T>(value:T):T=>structuredClone(value)
+const repository=createVersionedRepository<LiteraturePaper[]>({domain:'literature',schemaVersion:1,seedVersion:1,seed:()=>copy(initialPapers)})
+const canonicalAvailability=(value:string)=>['available-here','available-managed','available-provider'].includes(value)?'available':value==='another-device'?'windows-only':'missing'
 
 export const LiteratureService = {
   async getSnapshot(): Promise<LiteratureSnapshot> {
     await new Promise(resolve => setTimeout(resolve, 120))
+    const papers=await repository.getState(),resourceIds=[...new Set(papers.flatMap(paper=>paper.resources.map(resource=>resource.id)))],canonical=new Map((await GlobalResourceService.list(resourceIds)).map(resource=>[resource.id,resource]))
     const seen = new Map<string,LiteraturePaper>()
-    for (const paper of papers) seen.set(paper.stableId, paper)
+    for (const paper of papers)seen.set(paper.stableId,{...paper,resources:paper.resources.map(resource=>{const item=canonical.get(resource.id);return item?{...resource,availability:canonicalAvailability(item.byteAvailability) as typeof resource.availability}:resource}),pdfAvailability:(()=>{const pdf=paper.resources.find(resource=>resource.kind==='pdf'),item=pdf&&canonical.get(pdf.id);return item?canonicalAvailability(item.byteAvailability) as LiteraturePaper['pdfAvailability']:paper.pdfAvailability})()})
     return { ...(await connector.getSnapshot()), papers: [...seen.values()] }
   },
   async updateProjectState(stableId:string, projectId:string, values:{readingStatus?:Exclude<ReadingStatus,'not-tracked'>;priority?:Priority;note?:string}) {
-    papers = papers.map(p => p.stableId === stableId ? {...p, projectStates:{...p.projectStates,[projectId]:{...(p.projectStates[projectId]??{readingStatus:'to-read',tags:[]}),projectId,...values}}} : p)
-    return papers.find(p => p.stableId === stableId)!
+    const result=await repository.mutate(papers=>{if(!papers.some(p=>p.stableId===stableId))throw notFoundFailure('Paper not found');const state=papers.map(p => p.stableId === stableId ? {...p, projectStates:{...p.projectStates,[projectId]:{...(p.projectStates[projectId]??{readingStatus:'to-read',tags:[]}),projectId,...values}}} : p);return{state,value:state.find(p=>p.stableId===stableId)!}});return unwrapMutation(result)
   },
   async createReadingTask(stableId:string, projectId:string): Promise<ResearchTask> {
+    const papers=await repository.getState()
     const paper = papers.find(p => p.stableId === stableId)
-    if (!paper) throw new Error('Paper not found')
+    if (!paper) throw notFoundFailure('Paper not found')
     const task=await GlobalTaskService.createReadingTask(projectId,stableId,paper.title)
-    if(!paper.relatedTasks.some(item=>item.id===task.id))papers = papers.map(p => p.stableId === stableId ? {...p,relatedTasks:[...p.relatedTasks,task]} : p)
+    if(!paper.relatedTasks.some(item=>item.id===task.id))unwrapMutation(await repository.mutate(current=>({state:current.map(p=>p.stableId===stableId?{...p,relatedTasks:[...p.relatedTasks,task]}:p),value:task})))
     await this.updateProjectState(stableId,projectId,{readingStatus:'to-read'})
     return task
   },
   async unlinkProject(stableId:string, projectId:string) {
-    papers = papers.map(p => { if(p.stableId!==stableId)return p; const states={...p.projectStates}; delete states[projectId]; return {...p,projectStates:states,relatedProjects:p.relatedProjects.filter(project=>project.id!==projectId)} })
-    return papers.find(p => p.stableId === stableId)!
+    const result=await repository.mutate(papers=>{const state=papers.map(p => { if(p.stableId!==stableId)return p; const states={...p.projectStates}; delete states[projectId]; return {...p,projectStates:states,relatedProjects:p.relatedProjects.filter(project=>project.id!==projectId)} });const value=state.find(p=>p.stableId===stableId);if(!value)throw notFoundFailure('Paper not found');return{state,value}});return unwrapMutation(result)
   },
-  reset() { papers = structuredClone(initialPapers); GlobalTaskService.reset() },
+  async reset() { await repository.reset(); await GlobalTaskService.reset() },
+  invalidate(){repository.invalidate()},
 }

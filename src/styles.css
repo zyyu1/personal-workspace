@@ -158,6 +158,9 @@ button:disabled { cursor: not-allowed; opacity: .55; }
 .icon-button { width: 36px; height: 36px; padding: 0; border: 1px solid var(--border); border-radius: 9px; display: inline-grid; place-items: center; background: white; cursor: pointer; }
 .icon-button svg { width: 17px; height: 17px; }
 .mini-timer { position: fixed; left: 0; right: 0; bottom: 0; height: var(--timer-height); z-index: 30; display: flex; align-items: center; gap: 20px; padding: 9px 22px; border-top: 1px solid #ded2c3; background: #f2e9dd; box-shadow: 0 -7px 22px rgba(60,43,27,.07); }
+.workspace-error { position:fixed; right:18px; bottom:calc(var(--timer-height) + 14px); z-index:80; width:min(380px,calc(100vw - 28px)); display:flex; align-items:flex-start; gap:12px; padding:12px; border:1px solid #e1b8b3; border-radius:10px; background:#fff5f3; color:#74463f; box-shadow:0 12px 35px rgba(48,40,31,.16); }
+.workspace-error span { display:grid; gap:3px; flex:1; font-size:.8rem; }
+.workspace-error button { border:0; background:transparent; color:#74463f; cursor:pointer; font-weight:700; }
 .mini-timer > div:first-child { min-width: 230px; }
 .mini-timer strong { display: block; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .8rem; }
 .mini-timer time { font-variant-numeric: tabular-nums; font-size: 1.3rem; font-weight: 800; margin-left: auto; }
