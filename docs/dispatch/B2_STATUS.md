@@ -8,7 +8,7 @@
 - **B2A Development Authorization:** APPROVED FOR **CODE + MOCK TESTS + INDEPENDENT QA ONLY**
 - **B2A Implementation:** **CODE ACCEPTED / MERGED INTO `main`** — PR #9 Revision 01 accepted candidate `cba80fa7eabb55abf0c928e68ddad622e38a6516`, merge commit `ca68d1c1f952b3766647e2810e72483dfd5cef2c`; default-disabled notification sender, not running automatically
 - **B2A Independent QA:** **ACCEPTED FOR CODE** — Revision 01 23 PASS / 0 FAIL / 1 NOT VERIFIED; original candidate REJECTED, B2A-QA-001 High CLOSED. QA: https://github.com/zyyu1/personal-workspace/pull/9#issuecomment-7064087898
-- **B2A Real Windows Host Queue Probe:** **INCONCLUSIVE / ACK PENDING (2026-11-21)** — the single authorized B2A queue submission on Issue #10 returned `QUEUE_SUBMITTED / QUEUE_EXIT_ZERO_NOT_ACK`, exit 0. Exact original-thread visible delivery/nonce ACK **NOT YET OBSERVED** while the operator turn remained active. The one-shot permission has been **consumed**; `dispatch:approved` label removed. QA #24 remains NOT VERIFIED; **NO RESEND**.
+- **B2A Real Windows Host Queue Probe:** **PASS / MANUAL SAME-THREAD ACK ACCEPTED (2026-11-21)** — one authorized queue submission (`QUEUE_SUBMITTED`, exit 0) was followed by the user's exact matching nonce ACK pasted into the Design Window chat and explicit confirmation that they observed/copied it from the original Windows Codex Desktop execution thread. This is **human-attested** evidence, not machine-verified Codex telemetry. Acceptance: https://github.com/zyyu1/personal-workspace/issues/10#issuecomment-7064353100. QA #24 ACCEPTED for the scoped one-shot probe. Approval label revoked; no resend or further dispatch authorized.
 - **B2B Unattended Windows Polling:** NOT AUTHORIZED / NOT INSTALLED
 - **B3 Automatic Implementation Routing:** NOT AUTHORIZED
 - **B0 Existing-Session Probe:** ACCEPTED — `codex queue` reached same original Windows Desktop thread, Issue #3
@@ -20,7 +20,7 @@
 - **Module 007:** Handoff design approved; last verified `docs/handoffs/007/STATUS.md` says NOT STARTED / QA PENDING
 - **Module 008:** Design approved; remains NOT STARTED and BLOCKED by Module 007 independent QA accepted implementation
 - **Design Draft PR #7:** Historical proposal preserved; approved design on `main` is authoritative
-- **Next Action:** **OBSERVATION ONLY** after the original Windows Codex execution turn completes: inspect the supported view for the exact same-thread nonce ACK and manually report evidence to Issue #10. Do not invoke B2A or `codex queue` again, refresh labels, alter expiry, reset local outbox or force resume. `dispatch_enabled=false` remains in effect. Design Window independently resolves PASS / FAIL / INCONCLUSIVE. B2B/B3 and Modules 007/008 remain blocked.
+- **Next Action:** B2A supervised one-shot operational smoke is **COMPLETE**. The sender stays disabled (`dispatch_enabled=false`); preserve the single-delivery outbox and the consumed Issue #10 record. No more Queue probes or implementation tasks are authorized. **B2B unattended listener requires separate design, security/QA and user approval**; B3 and Modules 007/008 are not activated by this acceptance.
 
 **Approval boundary:** User's B2 design confirmation permits design freeze and the publication of a separate, scoped B2A code implementation instruction. It does not enable or install unattended automatic dispatch and does not authorize a real `codex queue` probe. B2B/B3 and module implementation remain separate future gates.
 
@@ -87,3 +87,17 @@ The preceding historical B2A code-only limitation was true at merge time. This n
 - **B2B / B3:** NOT AUTHORIZED, NOT RUNNING; Module 008 remains BLOCKED by Module 007 independent QA
 
 The earlier one-time probe authorization was consumed; the status above supersedes the historical 'NOT YET RUN' and the earlier authorized-but-unused notice. A later same-thread ACK may justify a formal acceptance update after independent review, but cannot reactivate delivery permission.
+
+## B2A Original-Thread ACK — Final Manual Verification and Acceptance (2026-11-21)
+
+- **One-time test Issue:** https://github.com/zyyu1/personal-workspace/issues/10 (approval label removed after queue submission; one-shot consumed)
+- **Earlier operator report:** https://github.com/zyyu1/personal-workspace/issues/10#issuecomment-7064280840 — B2A exit 0, `QUEUE_SUBMITTED / QUEUE_EXIT_ZERO_NOT_ACK`, locally pinned original active thread, no retry, disabled local config, clean worktree
+- **Earlier Design Window pending decision:** https://github.com/zyyu1/personal-workspace/issues/10#issuecomment-7064300388 — ACK PENDING while the original Codex operator turn was active
+- **New ACK evidence (manual attestation):** User posted `PWS-B2-ACK PWS-B2A-SMOKE-20261121-ISSUE10 PWSB2A-NONCE-20261121-ISSUE10` in the Design Window chat and explicitly confirmed **they saw and copied it from the original Windows Codex Desktop execution thread**. This is not independent remote session access, auto-ACK telemetry, or authenticated Codex event-stream verification; it is an exact-string human observation under the approved B2A manual verification procedure.
+- **Formal B2A operational decision:** **PASS — scoped one-time same-original-thread delivery and matching nonce ACK observed by the user**, [Design Window acceptance](https://github.com/zyyu1/personal-workspace/issues/10#issuecomment-7064353100).
+- **QA matrix #24:** PASS by **manual human-attested original-thread ACK**; not a claim that automatic ACK exists. The Revision 01 code QA's original `NOT VERIFIED` result remains historical, and its 23/0/1 code-only matrix is unchanged.
+- **GitHub status:** Issue #10 one-time approval permanently consumed; do not re-add `dispatch:approved`, regenerate/reuse record, or reset outbox to resend. Issue #8 was code-complete at the B2A merge and is now eligible for closure after this operational gate.
+- **Security:** `dispatch_enabled=false` restored and retained, no background watcher/service/scheduler, no poller GitHub write API, no B2B or B3, no module 007/008 application code.
+- **Next design gate:** **B2B automatic polling**, only with a new user decision, formal scoped design, independent QA, durable deduplication, disable/uninstall control and separately approved real-host tests.
+
+B2A PASS applies only to the one authorized supervised notification. It **does not prove** continuous unattended delivery, automatic ACK verification or permission to start arbitrary development tasks.
