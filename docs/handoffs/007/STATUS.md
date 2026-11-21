@@ -5,9 +5,9 @@
 - **Design:** APPROVED
 - **A01 Final Integration Gate:** READY FOR MODULE 007
 - **Baseline:** `dc829a9f69d2a31c1b3b3eb2429fe0124cc9d237`
-- **Implementation:** **CODE ACCEPTED by independent QA** at `1c35753804e6b99f2dc620756e4a8dce70f7292c`; **NOT MERGED — PR #15 mergeable=false; STATUS.md branch conflict requires doc-only reconciliation**
+- **Implementation:** **MERGED INTO `main` / CODE ACCEPTED** — PR #15 merge `cd2c7145b2a27a7b7e2815b9ad4eea53a6416b08`; accepted source HEAD `1c35753804e6b99f2dc620756e4a8dce70f7292c`, doc-only reconciled HEAD `35dd5e9417a2e711cd659c9b85b953a75f4f865f`.
 - **QA:** **ACCEPTED FOR CODE** at `1c35753804e6b99f2dc620756e4a8dce70f7292c` — 23 PASS / 0 FAIL / 1 PARTIAL (real Windows directory picker host verification), independent QA https://github.com/zyyu1/personal-workspace/pull/15#issuecomment-7065966274
-- **Next Action:** **STATUS.md-only merge conflict reconciliation** in PR #15, preserve main QA audit and host PARTIAL, independently confirm documentation-only delta and new mergeable HEAD. Design Window then makes final merge decision; no Module 008/B2B/B3/Queue.
+- **Next Action:** Module 007 code delivery complete. **Host acceptance gate #4 remains PARTIAL**, tracked at Issue #16; do not claim Windows folder picker PASS until a separately authorized real-host verification. Module 008 implementation requires a new explicit Design Window decision; no B2B/B3/Queue.
 - **Document Sync:** COMPLETE
 
 The historical Audit waiting statement in the Approved Design remains part of the frozen source and has not been edited. The final gate above and the formal Execution Instruction record that the implementation restriction has been lifted. Implementation remains NOT STARTED until the Development Window receives the separate start instruction.
@@ -39,3 +39,14 @@ The earlier historical “NOT STARTED” status above was superseded by the firs
 - **Dependent Module 008:** NOT STARTED / BLOCKED until Module 007 implementation is actually merged, accepted SHA/interfaces recorded and Design Window separately authorizes the next module; no automatic transition from code acceptance. B2B paused and B3/Queue not authorized.
 
 The historical REJECTED candidate and Remediation authorization above remain preserved for audit purposes. This newer section is the current authoritative decision and does not retroactively relabel earlier failed candidates as passing.
+
+## Module 007 Final Merge Acceptance — 2026-11-21 (CURRENT)
+
+- **Code QA ACCEPTED at source HEAD:** `1c35753804e6b99f2dc620756e4a8dce70f7292c` — https://github.com/zyyu1/personal-workspace/pull/15#issuecomment-7065966274. 23 PASS / 0 FAIL / **1 PARTIAL**, full 137/137 tests, Study 33/33, typecheck/lint/build/diff PASS and responsive browser checks at 390×844, 1024×768 and 1440×900.
+- **Conflict resolution independently CONFIRMED:** https://github.com/zyyu1/personal-workspace/pull/15#issuecomment-7066219520 — one `STATUS.md`-only commit after accepted code, reconciled HEAD `35dd5e9417a2e711cd659c9b85b953a75f4f865f`, no source/test/package/lockfile delta, final merged STATUS blob preserved historical audit and host PARTIAL.
+- **Final GitHub merge:** https://github.com/zyyu1/personal-workspace/pull/15 — **MERGED** to main on 2026-11-21, merge commit `cd2c7145b2a27a7b7e2815b9ad4eea53a6416b08`, GitHub confirmed merged. No bypass of independent QA, no force push and no overwriting main's original REJECTED/Rev01 records.
+- **Pending operational QA (separate):** Real Windows browser directory-picker and user folder authorization, **matrix #4 = PARTIAL / HOST VERIFICATION PENDING**, tracked by https://github.com/zyyu1/personal-workspace/issues/16. Browser fixtures/ZIP tests do not prove native Windows picker. This does not block the already-approved **code merge**, but it DOES prevent claiming 24/24 QA or full local-folder operational acceptance.
+- **Module 007 implementation state:** **COMPLETE / MERGED / CODE ACCEPTED; HOST QA PARTIAL**. No new ZIP extraction, filesystem write or Local Connector claim authorized by this status.
+- **Module 008:** No code started; the code acceptance/merge prerequisite is now met, but **implementation is NOT automatically authorized**. Separately confirm the accepted 007 domain interfaces and issue a new explicit Design Window start decision before any Module 008 work. Module 008's own status is authoritative for its approval gate.
+- **B2B:** user-requested on-demand workstream remains paused; no periodic listener, scheduler, or automatic delivery was activated. **B3 / real Codex Queue:** NOT AUTHORIZED.
+- All earlier rejection, remediation and merge-hold sections are retained as chronological history. **This most recent section supersedes their outdated point-in-time current status.**
