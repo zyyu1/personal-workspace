@@ -1,4 +1,4 @@
-# Personal Workspace Dispatch Inbox — B1
+# Personal Workspace Dispatch Inbox — B1 and B2A
 
 This directory contains the approved B1 read-only GitHub Issues inbox classifier. It is an operator-invoked diagnostic tool, not a dispatcher. It never calls Codex, never writes to GitHub, and never starts Module 007 or 008.
 
@@ -91,7 +91,7 @@ Use `--no-receipts` to opt out. Receipt corruption fails closed to a new local r
 
 Threats include forged authors/labels, malicious JSON, shell metacharacters, traversal or external URLs, stale/mismatched blobs, expired dispatches, false gate claims, oversized responses, partial pagination, auth/rate-limit failures, replay and secret leakage.
 
-Controls include exact field allowlisting, fixed repo/author/ref, URL/path rejection, SHA pinning, timezone-aware expiry, explicit human-approval flag for implementation mode, canonical authorization/status fields, cross-file QA/SHA consistency, bounded API work, subprocess argument arrays with `shell=False`, local atomic bounded receipts and sanitized outputs. GitHub Contents data requires `encoding=base64`, exact path/type, a matching Git blob SHA and UTF-8 text. Only ASCII CR/LF/space/tab wrapping is removed before strict Base64 validation. The code contains no `codex` invocation and no GitHub write method.
+Controls include exact field allowlisting, fixed repo/author/ref, URL/path rejection, SHA pinning, timezone-aware expiry, explicit human-approval flag for implementation mode, canonical authorization/status fields, cross-file QA/SHA consistency, bounded API work, subprocess argument arrays with `shell=False`, local atomic bounded receipts and sanitized outputs. GitHub Contents data requires `encoding=base64`, exact path/type, a matching Git blob SHA and UTF-8 text. Only ASCII CR/LF/space/tab wrapping is removed before strict Base64 validation. The B1 classifier contains no `codex` invocation and no GitHub write method.
 
 No global code-page, `PYTHONUTF8`, `PYTHONIOENCODING` or console mutation is required. Revision 02 development and unit tests do not authorize a real authenticated host poll; that smoke remains separately gated by independent QA and a later Design Window instruction.
 
@@ -112,6 +112,57 @@ There is no installed service to disable. Stop by not invoking the command. To r
 ## Future gates
 
 B2 notification delivery and B3 implementation routing are separate, blocked phases requiring new Design Window approval and independent QA. B1 intentionally has no `codex queue`, no automatic delivery, no Issue mutation and no implementation routing.
+
+## B2A supervised notification sender
+
+`b2_notify.py` is an isolated, notification-only B2A layer. It does not change the B1 command above. It is disabled unless all of the following are true:
+
+1. The operator explicitly supplies both `--notify-once` and `--enable-notifications`.
+2. A strict user-local configuration exists at `%LOCALAPPDATA%\PersonalWorkspace\dispatch-inbox\b2-notify-config.json` and contains `dispatch_enabled: true` plus `notification_only: true`.
+3. The current Windows user, fixed private repository, expected author, exact canonical UUID and pinned absolute `codex.exe` path match that local configuration.
+4. Exactly one open Issue passes the strict v2 Issue, main-branch notification-authorization record, handoff SHA, expiry and identity checks.
+5. The durable local outbox and one-instance lock can be written before the queue process starts.
+
+Revision 01 enforces exact JSON scalar types before any authorization comparison: integer fields must be actual JSON integers (never booleans or integral floats), authorization must be the actual JSON boolean `true`, the local approval flag must be the actual boolean `false`, and identity/path/SHA fields must be actual strings. Values such as `2.0`, `1`, `"true"` or `null` are never coerced and fail closed before PREPARED state or sender access.
+
+No local configuration is committed. A future operator configuration has exactly these keys; keep `dispatch_enabled` false until independent QA and a separate Design Window live-probe authorization:
+
+```json
+{
+  "version": 1,
+  "dispatch_enabled": false,
+  "notification_only": true,
+  "repository": "zyyu1/personal-workspace",
+  "expected_author": "zyyu1",
+  "expected_user": "<CURRENT_WINDOWS_USER>",
+  "thread_uuid": "<EXACT_EXISTING_THREAD_UUID>",
+  "codex_executable": "<ABSOLUTE_PINNED_CODEX.EXE_PATH>"
+}
+```
+
+The real sender command is a fixed argument array: `codex queue --thread <LOCAL_UUID> --message <FIXED_TEMPLATE>`, with `shell=False`, no `--resume`, no `--last` and no arbitrary Issue text. The target UUID is never printed, written to GitHub or stored in the outbox. Queue exit zero records `QUEUE_SUBMITTED`; it never records delivery or `ACK_VERIFIED`.
+
+The local write-ahead outbox records `PREPARED` before invoking Codex. `PREPARED`, `QUEUE_SUBMITTED`, `UNKNOWN_DELIVERY`, `ACK_REPORTED`, `ACK_VERIFIED` and `COMPLETE` suppress automatic resubmission. A recovered `PREPARED` becomes `UNKNOWN_DELIVERY`. Corrupt/unwritable state, a lock conflict, disabled config, cancelled/expired authorization or an uncertain queue result fails closed. There is no retry loop.
+
+Cancellation before `PREPARED` blocks submission. Cancellation after a queue item was submitted is best effort only and cannot be presented as revoking an already queued message.
+
+The checked-in `fixtures/b2a-policy-cases.json` is synthetic test data only. It is not a live authorization record and cannot enable delivery. All B2A development and QA tests inject fake queue runners. **LIVE QUEUE NOT RUN / B2B NOT ENABLED / B3 NOT AUTHORIZED / MODULE 008 BLOCKED.**
+
+### B2A disable and removal
+
+- Immediate stop: leave `dispatch_enabled` false or do not invoke the command.
+- Remove local capability: delete the user-local configuration after verifying the exact path.
+- Preserve an outbox containing `PREPARED`, `QUEUE_SUBMITTED` or `UNKNOWN_DELIVERY` until an operator has reconciled the original thread; deleting it can defeat deduplication.
+- A stale lock must be inspected and removed manually only after confirming no process is active. The code never auto-breaks a lock.
+- No service, scheduled task, daemon, watcher, startup entry, port or GitHub write permission is installed, so there is no background component to uninstall.
+
+The following command shape is documented for a separately authorized future one-time host probe. It must not be used during B2A development or code QA:
+
+```powershell
+py -3.13 tools/dispatch-inbox/b2_notify.py --notify-once --enable-notifications
+```
+
+See `B2A_OSS_REUSE_REVIEW.md` for the verified reuse decision and `docs/dispatch/B2_DESIGN_APPROVED.md` for the frozen security model.
 
 ## Tests
 

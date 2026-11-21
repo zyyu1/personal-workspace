@@ -1,0 +1,31 @@
+{
+  "fixture_only": true,
+  "live_authorization": false,
+  "cases": [
+    {
+      "name": "implement-mode-is-forbidden",
+      "envelope_overrides": {"mode": "implement"},
+      "expected_reason": "IMPLEMENT_MODE_FORBIDDEN"
+    },
+    {
+      "name": "unknown-module-is-forbidden",
+      "envelope_overrides": {"module": "999"},
+      "expected_reason": "MODULE_NOT_ALLOWED"
+    },
+    {
+      "name": "human-approval-mode-is-unsupported",
+      "envelope_overrides": {"requires_human_approval": true},
+      "expected_reason": "UNSUPPORTED_APPROVAL_MODE"
+    },
+    {
+      "name": "cancelled-label-blocks",
+      "issue_overrides": {
+        "labels": [
+          {"name": "dispatch:approved"},
+          {"name": "dispatch:cancelled"}
+        ]
+      },
+      "expected_reason": "NOTIFICATION_CANCELLED"
+    }
+  ]
+}
