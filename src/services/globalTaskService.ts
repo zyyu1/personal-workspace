@@ -15,7 +15,7 @@ const repository=createVersionedRepository<ResearchTask[]>({domain:'tasks',schem
 export const GlobalTaskService={
   async list(projectId?:string){const tasks=await repository.getState();return copy(projectId?tasks.filter(task=>task.projectId===projectId):tasks)},
   async get(id:string){const tasks=await repository.getState(),task=tasks.find(item=>item.id===id);return task?copy(task):undefined},
-  async create(values:{projectId:string;title:string;stage:string;taskType:TaskType;priority?:Priority;dueDate?:string;paperIds?:string[]}){
+  async create(values:{projectId:string;title:string;stage:string;taskType:TaskType;priority?:Priority;dueDate?:string;paperIds?:string[];area?:'research'|'study'|'work';resourceLinks?:ResearchTask['resourceLinks']}){
     const result=await repository.mutate(tasks=>{const task:ResearchTask={id:stableId('task'),status:'todo',dailyAssignments:[],plannedSessions:[],...values};return{state:[...tasks,task],value:task}})
     return unwrapMutation(result)
   },

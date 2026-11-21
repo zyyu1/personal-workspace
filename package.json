@@ -13,6 +13,7 @@
   "dependencies": {
     "@tanstack/react-table": "^8.21.3",
     "@vitejs/plugin-react": "latest",
+    "@zip.js/zip.js": "^2.25.0",
     "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",
