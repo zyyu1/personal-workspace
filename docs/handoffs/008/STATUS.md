@@ -5,13 +5,13 @@
 - **Design:** APPROVED / DESIGN FROZEN (confirmed 2026-11-21)
 - **Design Source:** `docs/handoffs/008/DESIGN_APPROVED.md`
 - **Execution Instruction:** `docs/handoffs/008/EXECUTION_INSTRUCTION.md`
-- **Implementation:** NOT STARTED — **AWAITING SEPARATE DESIGN WINDOW START AUTHORIZATION**; Module 007 code QA accepted and PR #15 merged, but this does not auto-start Module 008
+- **Implementation:** **START AUTHORIZED / DEVELOPMENT NOT YET EXECUTED** — after Module 007 FINAL ACCEPTED 24/24 and Issue #16 CLOSED. New explicit Module 008 authority: `MODULE_008_START_AUTHORIZATION.md`, work Issue #17.
 - **QA:** PENDING
-- **Prerequisite:** Module 007 CODE ACCEPTED (source `1c35753804e6b99f2dc620756e4a8dce70f7292c`) / PR #15 MERGED (`cd2c7145b2a27a7b7e2815b9ad4eea53a6416b08`); actual exported/domain interfaces must be mapped against merged main before separate Module 008 implementation release. Module 007 native Windows folder-picker QA #4 remains PARTIAL (Issue #16).
+- **Prerequisite:** **FULFILLED** — Module 007 code accepted at `1c35753804e6b99f2dc620756e4a8dce70f7292c`, PR #15 MERGED `cd2c7145b2a27a7b7e2815b9ad4eea53a6416b08`, native Windows folder-picker Rev03 independently ACCEPTED, matrix **24/24 PASS**, Issue #16 CLOSED. Accepted actual 007 interface map documented in `MODULE_008_START_AUTHORIZATION.md`.
 - **Shared Platform Baseline:** `dc829a9f69d2a31c1b3b3eb2429fe0124cc9d237` (A01 gate; NOT a substitute for 007 implementation baseline)
-- **Next Action:** Design Window may separately authorize Module 008 interface-mapping/development only after checking the merged 007 canonical contracts and prerequisites. Until a new explicit start instruction, **NO Module 008 branch/code/QA execution**. Keep the Windows picker host QA independent and do not treat it as PASS.
+- **Next Action:** Interactive Windows Development Window reads frozen 008 design, execution instruction, explicit Module 008 start authority and actual 007 interface map; verifies clean accepted main; implements **only Module 008** on a fresh `codex/module-008` branch; submits PR+QA handoff, then stops for independent Review Only QA. No automatic Windows dispatch.
 - **Handoff Publication:** COMPLETE
-- **Implementation Authorization:** **CONDITIONAL / NOT YET ACTIVE — NEEDS EXPLICIT DESIGN WINDOW START DECISION**
+- **Implementation Authorization:** **ACTIVE FOR MODULE 008 CODE ONLY** — `MODULE_008_START_AUTHORIZATION.md` and Issue #17. No source edits or execution have occurred in this Design Window; no QA/merge or Module 009 authority.
 
 The approved UI/UX design is frozen. The handoff's presence on GitHub **does not** authorize starting 008 coding before 007 QA. The QA Window reviews implemented code independently, and the Design Window determines acceptance and authorization of subsequent modules.
 
@@ -46,3 +46,14 @@ This is a dependency-state correction only; it does **not** activate the earlier
 - Design Window authorized [single atomic .ps1 Rev03 host retest](https://github.com/zyyu1/personal-workspace/blob/main/docs/handoffs/007/MODULE_007_WINDOWS_PICKER_HOST_QA_RETEST_REV03.md), no code modifications or additional privileges. Await operator positive browser proof and independent QA.
 - **Module 008 implementation remains NOT STARTED / NOT AUTHORIZED.** User requested final disposition of Module 007 host acceptance before Module 008, and an additional explicit interface-mapped 008 start gate remains necessary even after Rev03.
 - No B2B/B3 or real Codex Queue, scheduler, resident service or background automation.
+
+## Module 008 Explicit Development Release — AFTER Module 007 Final Acceptance (2026-11-21; CURRENT)
+
+- **Module 007 final operational acceptance:** https://github.com/zyyu1/personal-workspace/issues/16#issuecomment-7068768746 — Rev03 genuine Windows native-picker positive manual workflow independently QA ACCEPTED (https://github.com/zyyu1/personal-workspace/issues/16#issuecomment-7068589496), matrix #4 PASS; overall **24 PASS / 0 PARTIAL / 0 FAIL**. Issue #16 CLOSED. Earlier Rev01/Rev02 negative reports and limitations remain auditable; some post-grant steps were operator-attested rather than DOM-captured.
+- **Accepted upstream code:** PR #15 merged to main as `cd2c7145b2a27a7b7e2815b9ad4eea53a6416b08`, accepted code anchor `1c35753804e6b99f2dc620756e4a8dce70f7292c`.
+- **Formal new 008 implementation permission:** [`MODULE_008_START_AUTHORIZATION.md`](https://github.com/zyyu1/personal-workspace/blob/main/docs/handoffs/008/MODULE_008_START_AUTHORIZATION.md), [Issue #17](https://github.com/zyyu1/personal-workspace/issues/17) — **START AUTHORIZED FOR CODE ONLY**, subject to development window clean latest-main checkout, source-of-truth 007 interface review, safe v1 Study data migration, frozen 30-point acceptance and independent QA. Frozen DESIGN_APPROVED/EXECUTION_INSTRUCTION unchanged.
+- **Actual interface map completed by Design Window:** `StudyCourseService`/`StudyState` v1 canonical resource-level `CourseStudyProgress`, Resources/Tasks/TimeEntry/Resume, App/CourseWorkspace/StudyTabs; 008 design's new Units/Sets/Items/Attempts are permitted extension points. Developer must still report practical migration sketch before coding, and STOP for genuinely material interface conflict.
+- **Module 008 actual state:** No coding or separate QA has begun in this design decision. **Development authorized; implementation PENDING**. Separate branch `codex/module-008` and PR+independent Review Only QA required. No merge until new explicit Design Window acceptance, no Module 009.
+- **Other workstreams:** B2B paused/on-demand only; B3 and real Codex Queue NOT AUTHORIZED. GitHub publication does not wake the Windows computer or Codex Desktop.
+
+All earlier `NOT STARTED / BLOCKED` statements are historical records from before Module 007 host QA and this separate authorization; they are superseded only as to **permission to begin Module 008 coding**, not as to actual code/QA completion.
