@@ -63,6 +63,8 @@ h1 { margin: 0; font-size: clamp(1.75rem, 3vw, 2.45rem); line-height: 1.12; lett
 .secondary-button { background: white; border: 1px solid var(--border); color: #514d47; }
 .secondary-button:hover:not(:disabled) { border-color: var(--accent-hover); background: #fcfaf7; }
 button:disabled { cursor: not-allowed; opacity: .55; }
+.nav-item:disabled { opacity: .55; }
+.nav-item.active:disabled { opacity: 1; cursor: default; }
 .full { width: 100%; margin-top: 16px; }
 .research-tabs { display: flex; overflow-x: auto; scrollbar-width: none; gap: 6px; border-bottom: 1px solid var(--border); margin: 0 -3px 24px; padding: 0 3px; }
 .research-tabs a { white-space: nowrap; position: relative; color: var(--muted); text-decoration: none; padding: 11px 13px 12px; font-size: .85rem; font-weight: 650; }

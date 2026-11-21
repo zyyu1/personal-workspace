@@ -11,7 +11,7 @@ export function AppShell({ children, inspector, timer }: { children: ReactNode; 
   return <div className="app-shell">
     <aside className={`sidebar ${mobileNav ? 'is-open' : ''}`} aria-label="Global navigation">
       <div className="brand"><span className="brand-mark">P</span><span>Personal Workspace</span></div>
-      <nav>{navigation.map(([Icon, label]) => <button className={label === 'Research' ? 'nav-item active' : 'nav-item'} key={label}><Icon size={18}/><span>{label}</span></button>)}</nav>
+      <nav>{navigation.map(([Icon, label]) => <button className={label === 'Research' ? 'nav-item active' : 'nav-item'} key={label} disabled={label !== 'Research'} title={label !== 'Research' ? 'Not implemented in this increment' : 'Current area'} aria-current={label === 'Research' ? 'page' : undefined}><Icon size={18}/><span>{label}</span></button>)}</nav>
       <div className="sidebar-foot"><span className="status-dot"/>Local-first demo</div>
     </aside>
     {mobileNav && <button className="scrim" aria-label="Close navigation" onClick={() => setMobileNav(false)}/>} 
@@ -19,7 +19,7 @@ export function AppShell({ children, inspector, timer }: { children: ReactNode; 
       <header className="topbar">
         <button className="icon-button mobile-menu" aria-label={mobileNav ? 'Close menu' : 'Open menu'} onClick={() => setMobileNav(!mobileNav)}>{mobileNav ? <X/> : <Menu/>}</button>
         <div className="search"><Search size={17}/><span>Search projects, tasks, papers…</span><kbd>⌘ K</kbd></div>
-        <button className="quick-add">Add new</button>
+        <button className="quick-add" disabled title="Quick Add is outside this increment">Add new</button>
       </header>
       <div className={`content-frame ${inspector ? 'with-inspector' : ''}`}>
         <main className="main-content">{children}</main>
