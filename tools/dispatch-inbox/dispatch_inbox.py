@@ -415,7 +415,7 @@ def _module_008_gate(
     return None, None
 
 
-Runner = Callable[..., subprocess.CompletedProcess[str]]
+Runner = Callable[..., subprocess.CompletedProcess[bytes]]
 
 
 class GhApiClient:
@@ -455,33 +455,64 @@ class GhApiClient:
                     command,
                     check=False,
                     capture_output=True,
-                    text=True,
+                    text=False,
                     timeout=self.timeout_seconds,
                     shell=False,
                 )
             except subprocess.TimeoutExpired:
                 last_code = "GH_TIMEOUT"
+            except UnicodeError:
+                last_code = "GH_MALFORMED_RESPONSE"
             except OSError:
                 last_code = "GH_UNAVAILABLE"
             else:
-                if completed.returncode == 0:
+                returncode = getattr(completed, "returncode", None)
+                if not isinstance(returncode, int):
+                    last_code = "GH_MALFORMED_RESPONSE"
+                    if attempt < self.retries:
+                        self.sleeper(0.25 * (2**attempt))
+                    continue
+                if returncode == 0:
                     if auth_check:
                         return {"authenticated": True}
-                    encoded = completed.stdout.encode("utf-8", errors="replace")
-                    if len(encoded) > MAX_RESPONSE_BYTES:
+                    stdout = getattr(completed, "stdout", None)
+                    if isinstance(stdout, bytes):
+                        stdout_bytes = stdout
+                    elif isinstance(stdout, str):
+                        try:
+                            stdout_bytes = stdout.encode("utf-8", errors="strict")
+                        except UnicodeError as exc:
+                            raise AdapterUnavailable(
+                                "GH_MALFORMED_RESPONSE", "invalid stdout text"
+                            ) from exc
+                    else:
+                        raise AdapterUnavailable(
+                            "GH_MALFORMED_RESPONSE", "stdout is missing or invalid"
+                        )
+                    if not stdout_bytes:
+                        raise AdapterUnavailable("GH_MALFORMED_RESPONSE", "stdout is empty")
+                    if len(stdout_bytes) > MAX_RESPONSE_BYTES:
                         raise AdapterUnavailable("GH_RESPONSE_TOO_LARGE", "response exceeded limit")
                     try:
-                        return json.loads(completed.stdout)
-                    except json.JSONDecodeError as exc:
+                        stdout_text = stdout_bytes.decode("utf-8", errors="strict")
+                        return json.loads(stdout_text)
+                    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
                         raise AdapterUnavailable("GH_MALFORMED_RESPONSE", "invalid JSON") from exc
-                last_code = self._failure_code(completed.stderr, auth_check=auth_check)
+                last_code = self._failure_code(
+                    getattr(completed, "stderr", None), auth_check=auth_check
+                )
             if attempt < self.retries:
                 self.sleeper(0.25 * (2**attempt))
         raise AdapterUnavailable(last_code, "GitHub read request unavailable")
 
     @staticmethod
-    def _failure_code(stderr: str, *, auth_check: bool) -> str:
-        message = stderr.lower()[:4_096]
+    def _failure_code(stderr: object, *, auth_check: bool) -> str:
+        if isinstance(stderr, bytes):
+            message = stderr[:16_384].decode("utf-8", errors="replace").lower()
+        elif isinstance(stderr, str):
+            message = stderr[:4_096].lower()
+        else:
+            message = ""
         if auth_check or "authentication" in message or "not logged" in message or "401" in message:
             return "GH_AUTH_UNAVAILABLE"
         if "rate limit" in message or "429" in message:
