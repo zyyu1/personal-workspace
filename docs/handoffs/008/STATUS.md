@@ -39,3 +39,10 @@ This is a dependency-state correction only; it does **not** activate the earlier
 - One narrowly scoped [Module 007 Windows Host Retest Revision 02](https://github.com/zyyu1/personal-workspace/blob/main/docs/handoffs/007/MODULE_007_WINDOWS_PICKER_HOST_QA_RETEST_REV02.md) has been authorized for a disposable child under a safe local Documents directory, with original browser security and no fallback path or repeated retries.
 - **Module 008 remains NOT STARTED / NO IMPLEMENTATION AUTHORIZATION** while this final Module 007 host gate is unresolved. The user requested 007 closeout first. Even if Revision 02 succeeds, new independent host QA, Design Window final disposition, accepted merged 007 interface mapping and a **separate 008 start instruction** are still mandatory.
 - No B2B/B3 or real Codex Queue activation.
+
+## Rev03 Host QA Atomic-Retry Hold (2026-11-21)
+
+- [Module 007 Issue #16](https://github.com/zyyu1/personal-workspace/issues/16#issuecomment-7067278721): Revision 02 host QA did not reach browser due to execution-window JavaScript-to-PowerShell escaping/interactive-queue error; independent QA rejected the reported root cause, and the operator corrected it. **M007 matrix #4 stays PARTIAL**.
+- Design Window authorized [single atomic .ps1 Rev03 host retest](https://github.com/zyyu1/personal-workspace/blob/main/docs/handoffs/007/MODULE_007_WINDOWS_PICKER_HOST_QA_RETEST_REV03.md), no code modifications or additional privileges. Await operator positive browser proof and independent QA.
+- **Module 008 implementation remains NOT STARTED / NOT AUTHORIZED.** User requested final disposition of Module 007 host acceptance before Module 008, and an additional explicit interface-mapped 008 start gate remains necessary even after Rev03.
+- No B2B/B3 or real Codex Queue, scheduler, resident service or background automation.
