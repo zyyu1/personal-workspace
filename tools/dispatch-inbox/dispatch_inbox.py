@@ -5,8 +5,10 @@ from __future__ import annotations
 
 import argparse
 import base64
+import binascii
 import dataclasses
 import datetime as dt
+import hashlib
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -49,7 +51,12 @@ MODULE_RE = re.compile(r"^(?:[0-9]{3}|dispatch-b1)$")
 SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 FENCE_RE = re.compile(r"```dispatch\s*\n(?P<body>.*?)\n```", re.DOTALL)
 MAX_RESPONSE_BYTES = 1_000_000
+MAX_FILE_BYTES = 500_000
 MAX_RECEIPTS = 500
+A01_BASELINE_SHA = "dc829a9f69d2a31c1b3b3eb2429fe0124cc9d237"
+FIELD_KEY_RE = r"[A-Za-z][A-Za-z0-9 _-]{0,63}"
+BOLD_FIELD_RE = re.compile(rf"^(?:- )?\*\*(?P<key>{FIELD_KEY_RE}):\*\* (?P<value>\S.*?)\s*$")
+PLAIN_FIELD_RE = re.compile(rf"^(?:- )?(?P<key>{FIELD_KEY_RE}): (?P<value>\S.*?)\s*$")
 
 
 class AdapterUnavailable(RuntimeError):
@@ -158,14 +165,76 @@ def _author_login(issue: Mapping[str, Any]) -> str | None:
     return user.get("login") if isinstance(user, Mapping) and isinstance(user.get("login"), str) else None
 
 
-def _has_signed_authorization(content: str) -> bool:
-    upper = content.upper()
-    if "NOT AUTHORIZED" in upper or "DESIGN DRAFT" in upper:
-        return False
-    return "APPROVED" in upper and ("AUTHORIZED" in upper or "EXECUTION INSTRUCTION" in upper)
+def _canonical_fields(content: str) -> tuple[dict[str, str] | None, str | None]:
+    fields: dict[str, str] = {}
+    normalized_keys: set[str] = set()
+    for line in content.splitlines():
+        match = BOLD_FIELD_RE.fullmatch(line) or PLAIN_FIELD_RE.fullmatch(line)
+        if not match:
+            continue
+        key = match.group("key")
+        folded = key.casefold()
+        if folded in normalized_keys:
+            return None, "AUTHORIZATION_FIELDS_DUPLICATE"
+        value = match.group("value").strip()
+        if len(value) >= 2 and value.startswith("`") and value.endswith("`") and "`" not in value[1:-1]:
+            value = value[1:-1]
+        normalized_keys.add(folded)
+        fields[key] = value
+    return fields, None
+
+
+def _authorization_reason(path: str, content: str, module: str, mode: str) -> str | None:
+    fields, error = _canonical_fields(content)
+    if error or fields is None:
+        return error or "AUTHORIZATION_RECORD_INVALID"
+    negative_state = re.compile(
+        r"^(?:UNAUTHORIZED|NOT AUTHORIZED|DRAFT|PENDING|NOT STARTED|BLOCKED|"
+        r"CONDITIONAL, NOT YET ACTIVE|APPROVED\?|APPROVED WITH CONDITIONS)(?:\b|\s|—|$)"
+    )
+    for key in {
+        "Status",
+        "Approval",
+        "Authorization",
+        "Implementation",
+        "Implementation Authorization",
+        "Design Window Authorization",
+    }:
+        value = fields.get(key)
+        if isinstance(value, str) and negative_state.match(value):
+            return "AUTHORIZATION_NEGATIVE_OR_CONDITIONAL"
+    if module == "dispatch-b1":
+        if path != "docs/dispatch/B1_EXECUTION_INSTRUCTION.md":
+            return "AUTHORIZATION_PATH_MISMATCH"
+        status = fields.get("Status")
+        if not isinstance(status, str) or not re.fullmatch(
+            r"IMPLEMENTATION APPROVED FOR B1 ONLY(?: — \d{4}-\d{2}-\d{2})?", status
+        ):
+            return "AUTHORIZATION_STATE_NOT_APPROVED"
+        if fields.get("Owner") != "Windows Codex Development Window":
+            return "AUTHORIZATION_OWNER_MISMATCH"
+        if fields.get("Repository") not in {
+            ALLOWED_REPOSITORY,
+            f"`{ALLOWED_REPOSITORY}` (PRIVATE)",
+        }:
+            return "AUTHORIZATION_REPOSITORY_MISMATCH"
+        return None
+
+    if fields.get("Module") != module:
+        return "AUTHORIZATION_MODULE_MISMATCH"
+    if mode == "implement":
+        if fields.get("Status") != "IMPLEMENTATION AUTHORIZED":
+            return "AUTHORIZATION_STATE_NOT_APPROVED"
+        if fields.get("Implementation Authorization") != "ACTIVE":
+            return "IMPLEMENTATION_AUTHORIZATION_INACTIVE"
+        return None
+    if fields.get("Design") != "APPROVED":
+        return "DESIGN_AUTHORIZATION_MISSING"
+    return None
 
 
 FileFetcher = Callable[[str], FileSnapshot]
+CommitVerifier = Callable[[str], bool]
 
 
 def classify_issue(
@@ -173,6 +242,7 @@ def classify_issue(
     fetch_file: FileFetcher,
     *,
     now: dt.datetime | None = None,
+    verify_commit: CommitVerifier | None = None,
 ) -> Classification:
     now = now or dt.datetime.now(dt.timezone.utc)
     number = issue.get("number") if isinstance(issue.get("number"), int) else None
@@ -226,19 +296,20 @@ def classify_issue(
         return _reject(number, "AUTHORITATIVE_REF_MISMATCH", dispatch_id)
     if handoff.path != path or handoff.blob_sha != expected_sha:
         return _reject(number, "HANDOFF_BLOB_MISMATCH", dispatch_id)
-    if not _has_signed_authorization(handoff.content):
-        return _block(number, dispatch_id, "AUTHORIZATION_RECORD_MISSING", handoff.blob_sha)
+    authorization_reason = _authorization_reason(
+        handoff.path, handoff.content, envelope["module"], envelope["mode"]
+    )
+    if authorization_reason:
+        return _block(number, dispatch_id, authorization_reason, handoff.blob_sha)
 
     if envelope["mode"] == "implement" and envelope["gate_status"] != "READY":
         return _block(number, dispatch_id, "DECLARED_GATE_NOT_READY", handoff.blob_sha)
     if envelope["mode"] == "implement" and envelope["module"] == "008":
-        try:
-            module_007 = fetch_file("docs/handoffs/007/STATUS.md")
-        except AdapterUnavailable as exc:
-            return Classification(number, dispatch_id, "UNAVAILABLE", exc.code)
-        status = module_007.content.upper()
-        if "QA: ACCEPTED" not in status and "QA:** ACCEPTED" not in status:
-            return _block(number, dispatch_id, "MODULE_008_BLOCKED_BY_007_QA", handoff.blob_sha)
+        gate_reason, unavailable_code = _module_008_gate(fetch_file, verify_commit)
+        if unavailable_code:
+            return Classification(number, dispatch_id, "UNAVAILABLE", unavailable_code)
+        if gate_reason:
+            return _block(number, dispatch_id, gate_reason, handoff.blob_sha)
 
     return Classification(
         number,
@@ -247,6 +318,101 @@ def classify_issue(
         "VALIDATED_DRY_RUN_ONLY",
         authoritative_blob_sha=handoff.blob_sha,
     )
+
+
+def _required_gate_file(
+    fetch_file: FileFetcher, path: str
+) -> tuple[FileSnapshot | None, str | None, str | None]:
+    try:
+        snapshot = fetch_file(path)
+    except AdapterUnavailable as exc:
+        if exc.code in {"GH_NOT_FOUND", "FIXTURE_FILE_MISSING"}:
+            return None, "GATE_EVIDENCE_MISSING", None
+        return None, None, exc.code
+    if snapshot.path != path or snapshot.ref != AUTHORITATIVE_REF:
+        return None, "GATE_EVIDENCE_UNTRUSTED", None
+    return snapshot, None, None
+
+
+def _module_008_gate(
+    fetch_file: FileFetcher, verify_commit: CommitVerifier | None
+) -> tuple[str | None, str | None]:
+    status_007, missing_reason, unavailable = _required_gate_file(
+        fetch_file, "docs/handoffs/007/STATUS.md"
+    )
+    if unavailable:
+        return None, unavailable
+    if missing_reason or status_007 is None:
+        return (
+            "MODULE_007_STATUS_MISSING"
+            if missing_reason == "GATE_EVIDENCE_MISSING"
+            else "MODULE_007_STATUS_INVALID"
+        ), None
+    fields_007, error = _canonical_fields(status_007.content)
+    if error or fields_007 is None:
+        return "MODULE_007_STATUS_INVALID", None
+    if fields_007.get("Module") != "007":
+        return "MODULE_007_ID_MISMATCH", None
+    if fields_007.get("Independent QA") != "ACCEPTED":
+        return "MODULE_007_QA_NOT_ACCEPTED", None
+    if fields_007.get("Implementation Acceptance") != "ACCEPTED":
+        return "MODULE_007_IMPLEMENTATION_NOT_ACCEPTED", None
+    accepted_sha = fields_007.get("Accepted Implementation SHA")
+    if not isinstance(accepted_sha, str) or not SHA_RE.fullmatch(accepted_sha):
+        return "MODULE_007_ACCEPTED_SHA_MISSING", None
+    if accepted_sha == A01_BASELINE_SHA:
+        return "MODULE_007_ACCEPTED_SHA_IS_A01_BASELINE", None
+    report_path = _safe_handoff_path(fields_007.get("Independent QA Report"))
+    if report_path is None or not report_path.startswith("docs/handoffs/007/"):
+        return "MODULE_007_QA_EVIDENCE_MISSING", None
+    report, missing_reason, unavailable = _required_gate_file(fetch_file, report_path)
+    if unavailable:
+        return None, unavailable
+    if missing_reason or report is None:
+        return (
+            "MODULE_007_QA_EVIDENCE_MISSING"
+            if missing_reason == "GATE_EVIDENCE_MISSING"
+            else "MODULE_007_QA_EVIDENCE_INVALID"
+        ), None
+    report_fields, error = _canonical_fields(report.content)
+    if error or report_fields is None:
+        return "MODULE_007_QA_EVIDENCE_INVALID", None
+    if (
+        report_fields.get("Module") != "007"
+        or report_fields.get("QA Decision") != "ACCEPTED"
+        or report_fields.get("Accepted Implementation SHA") != accepted_sha
+    ):
+        return "MODULE_007_QA_EVIDENCE_MISMATCH", None
+    if verify_commit is None:
+        return "MODULE_007_COMMIT_UNVERIFIED", None
+    try:
+        commit_exists = verify_commit(accepted_sha)
+    except AdapterUnavailable as exc:
+        return None, exc.code
+    if not commit_exists:
+        return "MODULE_007_COMMIT_UNVERIFIED", None
+
+    status_008, missing_reason, unavailable = _required_gate_file(
+        fetch_file, "docs/handoffs/008/STATUS.md"
+    )
+    if unavailable:
+        return None, unavailable
+    if missing_reason or status_008 is None:
+        return (
+            "MODULE_008_STATUS_MISSING"
+            if missing_reason == "GATE_EVIDENCE_MISSING"
+            else "MODULE_008_STATUS_INVALID"
+        ), None
+    fields_008, error = _canonical_fields(status_008.content)
+    if error or fields_008 is None:
+        return "MODULE_008_STATUS_INVALID", None
+    if fields_008.get("Module") != "008":
+        return "MODULE_008_ID_MISMATCH", None
+    if fields_008.get("Implementation Authorization") != "ACTIVE":
+        return "MODULE_008_AUTHORIZATION_INACTIVE", None
+    if fields_008.get("Implementation") != "AUTHORIZED":
+        return "MODULE_008_IMPLEMENTATION_NOT_AUTHORIZED", None
+    return None, None
 
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
@@ -362,13 +528,42 @@ class GhApiClient:
             raise AdapterUnavailable("GH_MALFORMED_RESPONSE", "file response is not an object")
         sha = payload.get("sha")
         content = payload.get("content")
-        if not isinstance(sha, str) or not SHA_RE.fullmatch(sha) or not isinstance(content, str):
+        if (
+            payload.get("type") != "file"
+            or payload.get("path") != safe_path
+            or payload.get("encoding") != "base64"
+            or not isinstance(sha, str)
+            or not SHA_RE.fullmatch(sha)
+            or not isinstance(content, str)
+            or not content
+        ):
             raise AdapterUnavailable("GH_MALFORMED_RESPONSE", "file metadata is invalid")
         try:
-            decoded = base64.b64decode(content, validate=True).decode("utf-8")
-        except (ValueError, UnicodeDecodeError) as exc:
+            encoded = content.encode("ascii")
+            if len(encoded) > MAX_RESPONSE_BYTES:
+                raise ValueError("encoded file exceeds limit")
+            normalized = re.sub(rb"[\r\n\t ]", b"", encoded)
+            if not normalized:
+                raise ValueError("empty encoded file")
+            decoded_bytes = base64.b64decode(normalized, validate=True)
+            if not decoded_bytes or len(decoded_bytes) > MAX_FILE_BYTES:
+                raise ValueError("decoded file size invalid")
+            computed_sha = hashlib.sha1(
+                f"blob {len(decoded_bytes)}\0".encode("ascii") + decoded_bytes
+            ).hexdigest()
+            if computed_sha != sha:
+                raise ValueError("blob identity mismatch")
+            decoded = decoded_bytes.decode("utf-8")
+        except (binascii.Error, ValueError, UnicodeDecodeError, UnicodeEncodeError) as exc:
             raise AdapterUnavailable("GH_MALFORMED_RESPONSE", "file content is invalid") from exc
         return FileSnapshot(safe_path, sha, decoded)
+
+    def commit_exists(self, sha: str) -> bool:
+        if not SHA_RE.fullmatch(sha):
+            return False
+        endpoint = f"repos/{ALLOWED_REPOSITORY}/git/commits/{sha}"
+        payload = self._run(["api", "--method", "GET", endpoint])
+        return isinstance(payload, dict) and payload.get("sha") == sha
 
 
 class ReceiptStore:
@@ -426,15 +621,16 @@ def process_issues(
     receipt_store: ReceiptStore,
     *,
     now: dt.datetime | None = None,
+    verify_commit: CommitVerifier | None = None,
 ) -> list[Classification]:
     results: list[Classification] = []
     for issue in issues:
-        result = classify_issue(issue, fetch_file, now=now)
+        result = classify_issue(issue, fetch_file, now=now, verify_commit=verify_commit)
         results.append(receipt_store.record(result))
     return results
 
 
-def _fixture_source(path: Path) -> tuple[list[dict[str, Any]], FileFetcher]:
+def _fixture_source(path: Path) -> tuple[list[dict[str, Any]], FileFetcher, CommitVerifier]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
@@ -442,6 +638,9 @@ def _fixture_source(path: Path) -> tuple[list[dict[str, Any]], FileFetcher]:
     if not isinstance(data, dict) or not isinstance(data.get("issues"), list) or not isinstance(data.get("files"), dict):
         raise AdapterUnavailable("FIXTURE_INVALID", "fixture shape is invalid")
     files = data["files"]
+    commits = data.get("commits", [])
+    if not isinstance(commits, list) or not all(isinstance(item, str) for item in commits):
+        raise AdapterUnavailable("FIXTURE_INVALID", "fixture commits are invalid")
 
     def fetch_file(file_path: str) -> FileSnapshot:
         item = files.get(file_path)
@@ -454,7 +653,11 @@ def _fixture_source(path: Path) -> tuple[list[dict[str, Any]], FileFetcher]:
             str(item.get("ref", AUTHORITATIVE_REF)),
         )
 
-    return [item for item in data["issues"] if isinstance(item, dict)], fetch_file
+    return (
+        [item for item in data["issues"] if isinstance(item, dict)],
+        fetch_file,
+        lambda sha: sha in commits,
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -474,12 +677,15 @@ def main(argv: list[str] | None = None) -> int:
     receipt_store = ReceiptStore(enabled=not args.no_receipts)
     try:
         if args.fixture:
-            issues, fetch_file = _fixture_source(args.fixture)
+            issues, fetch_file, verify_commit = _fixture_source(args.fixture)
         else:
             client = GhApiClient()
             issues = client.list_open_issues()
             fetch_file = client.fetch_file
-        results = process_issues(issues, fetch_file, receipt_store)
+            verify_commit = client.commit_exists
+        results = process_issues(
+            issues, fetch_file, receipt_store, verify_commit=verify_commit
+        )
     except AdapterUnavailable as exc:
         result = Classification(None, None, "UNAVAILABLE", exc.code)
         print(json.dumps(result.as_public_dict(), sort_keys=True))

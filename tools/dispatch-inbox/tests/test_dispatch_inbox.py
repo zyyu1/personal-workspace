@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import datetime as dt
+import base64
+import hashlib
 import importlib.util
 import json
 from pathlib import Path
@@ -21,7 +23,17 @@ SPEC.loader.exec_module(dispatch_inbox)
 NOW = dt.datetime(2026, 11, 21, 12, 0, tzinfo=dt.timezone.utc)
 HANDOFF_PATH = "docs/dispatch/B1_EXECUTION_INSTRUCTION.md"
 HANDOFF_SHA = "a" * 40
-AUTHORIZED = "# Execution Instruction\nStatus: APPROVED\nImplementation: AUTHORIZED"
+AUTHORIZED = """# Execution Instruction
+Status: IMPLEMENTATION APPROVED FOR B1 ONLY
+Owner: Windows Codex Development Window
+Repository: zyyu1/personal-workspace"""
+MODULE_008_PATH = "docs/handoffs/008/EXECUTION_INSTRUCTION.md"
+MODULE_008_SHA = "b" * 40
+MODULE_007_IMPLEMENTATION_SHA = "1" * 40
+MODULE_007_QA_PATH = "docs/handoffs/007/QA_RESULT.md"
+MODULE_008_AUTHORIZED = """Module: 008
+Status: IMPLEMENTATION AUTHORIZED
+Implementation Authorization: ACTIVE"""
 
 
 def envelope(**overrides):
@@ -57,9 +69,76 @@ def issue(env=None, **overrides):
 
 
 def fetcher(path):
-    if path == "docs/handoffs/007/STATUS.md":
-        return dispatch_inbox.FileSnapshot(path, "b" * 40, "QA: PENDING")
     return dispatch_inbox.FileSnapshot(path, HANDOFF_SHA, AUTHORIZED)
+
+
+def module_008_envelope(**overrides):
+    return envelope(
+        mode="implement",
+        module="008",
+        handoff_path=MODULE_008_PATH,
+        handoff_blob_sha=MODULE_008_SHA,
+        **overrides,
+    )
+
+
+def gate_files(
+    *,
+    qa="ACCEPTED",
+    accepted_sha=MODULE_007_IMPLEMENTATION_SHA,
+    acceptance="ACCEPTED",
+    report_sha=MODULE_007_IMPLEMENTATION_SHA,
+    report_decision="ACCEPTED",
+    authorization="ACTIVE",
+):
+    return {
+        MODULE_008_PATH: dispatch_inbox.FileSnapshot(
+            MODULE_008_PATH, MODULE_008_SHA, MODULE_008_AUTHORIZED
+        ),
+        "docs/handoffs/007/STATUS.md": dispatch_inbox.FileSnapshot(
+            "docs/handoffs/007/STATUS.md",
+            "c" * 40,
+            "\n".join(
+                [
+                    "Module: 007",
+                    f"Independent QA: {qa}",
+                    f"Implementation Acceptance: {acceptance}",
+                    f"Accepted Implementation SHA: {accepted_sha}",
+                    f"Independent QA Report: {MODULE_007_QA_PATH}",
+                ]
+            ),
+        ),
+        MODULE_007_QA_PATH: dispatch_inbox.FileSnapshot(
+            MODULE_007_QA_PATH,
+            "d" * 40,
+            "\n".join(
+                [
+                    "Module: 007",
+                    f"QA Decision: {report_decision}",
+                    f"Accepted Implementation SHA: {report_sha}",
+                ]
+            ),
+        ),
+        "docs/handoffs/008/STATUS.md": dispatch_inbox.FileSnapshot(
+            "docs/handoffs/008/STATUS.md",
+            "e" * 40,
+            "\n".join(
+                [
+                    "Module: 008",
+                    "Implementation: AUTHORIZED",
+                    f"Implementation Authorization: {authorization}",
+                ]
+            ),
+        ),
+    }
+
+
+def mapping_fetcher(files):
+    def fetch(path):
+        if path not in files:
+            raise dispatch_inbox.AdapterUnavailable("FIXTURE_FILE_MISSING", "missing")
+        return files[path]
+    return fetch
 
 
 class ClassificationTests(unittest.TestCase):
@@ -106,9 +185,12 @@ class ClassificationTests(unittest.TestCase):
         self.assertEqual(result.reason_code, "REQUEST_EXPIRED_OR_INVALID")
 
     def test_008_implementation_blocked_while_007_pending(self):
-        env = envelope(mode="implement", module="008")
-        result = self.classify(issue(env))
-        self.assertEqual((result.classification, result.reason_code), ("BLOCKED_GATE", "MODULE_008_BLOCKED_BY_007_QA"))
+        files = gate_files(qa="PENDING")
+        result = dispatch_inbox.classify_issue(
+            issue(module_008_envelope()), mapping_fetcher(files), now=NOW,
+            verify_commit=lambda sha: True,
+        )
+        self.assertEqual((result.classification, result.reason_code), ("BLOCKED_GATE", "MODULE_007_QA_NOT_ACCEPTED"))
 
     def test_implementation_requires_human_approval(self):
         result = self.classify(issue(envelope(mode="implement", requires_human_approval=False)))
@@ -124,12 +206,115 @@ class ClassificationTests(unittest.TestCase):
         def unsigned(path):
             return dispatch_inbox.FileSnapshot(path, HANDOFF_SHA, "Status: DRAFT / NOT AUTHORIZED")
         result = dispatch_inbox.classify_issue(issue(), unsigned, now=NOW)
-        self.assertEqual((result.classification, result.reason_code), ("BLOCKED_GATE", "AUTHORIZATION_RECORD_MISSING"))
+        self.assertEqual((result.classification, result.reason_code), ("BLOCKED_GATE", "AUTHORIZATION_NEGATIVE_OR_CONDITIONAL"))
+
+    def test_markdown_canonical_authorization_is_accepted(self):
+        content = """# Personal Workspace — B1 Read-Only GitHub Inbox Listener / Execution Instruction
+**Status:** IMPLEMENTATION APPROVED FOR B1 ONLY — 2026-11-21
+**Owner:** Windows Codex Development Window
+**Repository:** `zyyu1/personal-workspace` (PRIVATE)"""
+        result = dispatch_inbox.classify_issue(
+            issue(), lambda path: dispatch_inbox.FileSnapshot(path, HANDOFF_SHA, content), now=NOW
+        )
+        self.assertEqual(result.classification, "ELIGIBLE_DRY_RUN")
+
+    def test_adversarial_authorization_records_fail_closed(self):
+        cases = [
+            "Status: DRAFT\nApproval: APPROVED?\nImplementation: UNAUTHORIZED",
+            "Status: NOT AUTHORIZED\nOwner: Windows Codex Development Window\nRepository: zyyu1/personal-workspace",
+            "Status: UNAUTHORIZED\nOwner: Windows Codex Development Window\nRepository: zyyu1/personal-workspace",
+            "Authorization: NOT AUTHORIZED\nAPPROVED only in prose.",
+            "Status: APPROVED WITH CONDITIONS\nOwner: Windows Codex Development Window\nRepository: zyyu1/personal-workspace",
+            "status: IMPLEMENTATION APPROVED FOR B1 ONLY\nowner: Windows Codex Development Window\nrepository: zyyu1/personal-workspace",
+            "Status : IMPLEMENTATION APPROVED FOR B1 ONLY\nOwner: Windows Codex Development Window\nRepository: zyyu1/personal-workspace",
+            "Module: 008\nStatus: IMPLEMENTATION AUTHORIZED\nImplementation Authorization: ACTIVE",
+            "This prose says APPROVED and AUTHORIZED but defines no canonical fields.",
+            "Status: DRAFT\nStatus: IMPLEMENTATION APPROVED FOR B1 ONLY\nOwner: Windows Codex Development Window\nRepository: zyyu1/personal-workspace",
+            "Status: IMPLEMENTATION APPROVED FOR B1 ONLY\nImplementation: UNAUTHORIZED\nOwner: Windows Codex Development Window\nRepository: zyyu1/personal-workspace",
+        ]
+        for content in cases:
+            with self.subTest(content=content):
+                result = dispatch_inbox.classify_issue(
+                    issue(), lambda path, text=content: dispatch_inbox.FileSnapshot(path, HANDOFF_SHA, text), now=NOW
+                )
+                self.assertNotEqual(result.classification, "ELIGIBLE_DRY_RUN")
 
     def test_malformed_json_rejected(self):
         value = issue()
         value["body"] = "```dispatch\n{not-json}\n```"
         self.assertEqual(self.classify(value).reason_code, "ENVELOPE_MALFORMED")
+
+
+class Module008GateTests(unittest.TestCase):
+    def classify(self, files, *, commit=True):
+        return dispatch_inbox.classify_issue(
+            issue(module_008_envelope()),
+            mapping_fetcher(files),
+            now=NOW,
+            verify_commit=lambda sha: commit and sha == MODULE_007_IMPLEMENTATION_SHA,
+        )
+
+    def test_fully_consistent_fixture_is_eligible(self):
+        self.assertEqual(self.classify(gate_files()).classification, "ELIGIBLE_DRY_RUN")
+
+    def test_qa_accepted_without_sha_is_blocked(self):
+        self.assertEqual(
+            self.classify(gate_files(accepted_sha="")).reason_code,
+            "MODULE_007_ACCEPTED_SHA_MISSING",
+        )
+
+    def test_malformed_sha_is_blocked(self):
+        self.assertEqual(
+            self.classify(gate_files(accepted_sha="not-a-sha")).reason_code,
+            "MODULE_007_ACCEPTED_SHA_MISSING",
+        )
+
+    def test_fake_sha_not_in_repository_is_blocked(self):
+        self.assertEqual(
+            self.classify(gate_files(), commit=False).reason_code,
+            "MODULE_007_COMMIT_UNVERIFIED",
+        )
+
+    def test_conflicting_qa_report_sha_is_blocked(self):
+        self.assertEqual(
+            self.classify(gate_files(report_sha="2" * 40)).reason_code,
+            "MODULE_007_QA_EVIDENCE_MISMATCH",
+        )
+
+    def test_accepted_with_fixes_is_blocked(self):
+        self.assertEqual(
+            self.classify(gate_files(qa="ACCEPTED WITH FIXES")).reason_code,
+            "MODULE_007_QA_NOT_ACCEPTED",
+        )
+
+    def test_a01_baseline_substitution_is_blocked(self):
+        sha = dispatch_inbox.A01_BASELINE_SHA
+        self.assertEqual(
+            self.classify(gate_files(accepted_sha=sha, report_sha=sha)).reason_code,
+            "MODULE_007_ACCEPTED_SHA_IS_A01_BASELINE",
+        )
+
+    def test_007_accepted_but_008_inactive_is_blocked(self):
+        self.assertEqual(
+            self.classify(gate_files(authorization="CONDITIONAL, NOT YET ACTIVE")).reason_code,
+            "MODULE_008_AUTHORIZATION_INACTIVE",
+        )
+
+    def test_wrong_status_module_is_blocked(self):
+        files = gate_files()
+        files["docs/handoffs/007/STATUS.md"] = dispatch_inbox.FileSnapshot(
+            "docs/handoffs/007/STATUS.md", "c" * 40,
+            files["docs/handoffs/007/STATUS.md"].content.replace("Module: 007", "Module: 008"),
+        )
+        self.assertEqual(self.classify(files).reason_code, "MODULE_007_ID_MISMATCH")
+
+    def test_non_main_gate_evidence_is_blocked(self):
+        files = gate_files()
+        original = files["docs/handoffs/007/STATUS.md"]
+        files["docs/handoffs/007/STATUS.md"] = dispatch_inbox.FileSnapshot(
+            original.path, original.blob_sha, original.content, "feature"
+        )
+        self.assertEqual(self.classify(files).reason_code, "MODULE_007_STATUS_INVALID")
 
 
 class ReceiptTests(unittest.TestCase):
@@ -153,6 +338,22 @@ class ReceiptTests(unittest.TestCase):
 
 
 class AdapterTests(unittest.TestCase):
+    @staticmethod
+    def file_client(content, *, encoding="base64", sha=None, path=HANDOFF_PATH):
+        raw = content if isinstance(content, bytes) else content.encode("utf-8")
+        payload = {
+            "type": "file",
+            "path": path,
+            "encoding": encoding,
+            "sha": sha or hashlib.sha1(f"blob {len(raw)}\0".encode("ascii") + raw).hexdigest(),
+            "content": base64.b64encode(raw).decode("ascii"),
+        }
+        def runner(command, **kwargs):
+            return subprocess.CompletedProcess(command, 0, json.dumps(payload), "")
+        client = dispatch_inbox.GhApiClient(runner=runner, retries=0)
+        client.executable = "gh"
+        return client, payload
+
     def test_missing_gh_is_unavailable(self):
         client = dispatch_inbox.GhApiClient(retries=0)
         client.executable = None
@@ -217,6 +418,64 @@ class AdapterTests(unittest.TestCase):
         with self.assertRaises(dispatch_inbox.AdapterUnavailable) as error:
             client.list_open_issues()
         self.assertEqual(error.exception.code, "GH_PAGE_LIMIT_REACHED")
+
+    def test_github_wrapped_base64_lf_and_crlf_are_accepted(self):
+        for separator in ["\n", "\r\n"]:
+            with self.subTest(separator=repr(separator)):
+                client, payload = self.file_client(AUTHORIZED)
+                value = payload["content"]
+                payload["content"] = separator.join(value[index:index + 12] for index in range(0, len(value), 12))
+                snapshot = client.fetch_file(HANDOFF_PATH)
+                self.assertEqual(snapshot.content, AUTHORIZED)
+
+    def test_unwrapped_base64_is_accepted(self):
+        client, _ = self.file_client(AUTHORIZED)
+        self.assertEqual(client.fetch_file(HANDOFF_PATH).content, AUTHORIZED)
+
+    def test_github_file_payload_rejects_invalid_variants(self):
+        cases = {}
+        client, payload = self.file_client(AUTHORIZED)
+        cases["wrong encoding"] = {**payload, "encoding": "utf-8"}
+        cases["bad padding"] = {**payload, "content": payload["content"][:-1]}
+        cases["invalid alphabet"] = {**payload, "content": payload["content"][:-2] + "!@"}
+        cases["empty"] = {**payload, "content": ""}
+        cases["wrong path"] = {**payload, "path": "docs/dispatch/OTHER.md"}
+        cases["wrong sha"] = {**payload, "sha": "f" * 40}
+        invalid_utf8 = b"\xff\xfe\xfd"
+        invalid_sha = hashlib.sha1(f"blob {len(invalid_utf8)}\0".encode("ascii") + invalid_utf8).hexdigest()
+        cases["invalid utf8"] = {
+            **payload,
+            "sha": invalid_sha,
+            "content": base64.b64encode(invalid_utf8).decode("ascii"),
+        }
+        oversized = b"x" * (dispatch_inbox.MAX_FILE_BYTES + 1)
+        oversized_sha = hashlib.sha1(f"blob {len(oversized)}\0".encode("ascii") + oversized).hexdigest()
+        cases["oversized"] = {
+            **payload,
+            "sha": oversized_sha,
+            "content": base64.b64encode(oversized).decode("ascii"),
+        }
+        for name, invalid_payload in cases.items():
+            with self.subTest(name=name):
+                def runner(command, **kwargs):
+                    return subprocess.CompletedProcess(command, 0, json.dumps(invalid_payload), "")
+                invalid_client = dispatch_inbox.GhApiClient(runner=runner, retries=0)
+                invalid_client.executable = "gh"
+                with self.assertRaises(dispatch_inbox.AdapterUnavailable) as error:
+                    invalid_client.fetch_file(HANDOFF_PATH)
+                self.assertEqual(error.exception.code, "GH_MALFORMED_RESPONSE")
+
+    def test_commit_verification_is_read_only_and_exact(self):
+        sha = MODULE_007_IMPLEMENTATION_SHA
+        calls = []
+        def runner(command, **kwargs):
+            calls.append(command)
+            return subprocess.CompletedProcess(command, 0, json.dumps({"sha": sha}), "")
+        client = dispatch_inbox.GhApiClient(runner=runner, retries=0)
+        client.executable = "gh"
+        self.assertTrue(client.commit_exists(sha))
+        self.assertIn("--method", calls[0])
+        self.assertIn("GET", calls[0])
 
 
 class CliTests(unittest.TestCase):

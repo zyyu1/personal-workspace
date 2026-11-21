@@ -42,7 +42,40 @@ An Issue must contain exactly one fenced `dispatch` JSON object with exactly the
 
 `schema_version`, `dispatch_id`, `mode`, `module`, `repo`, `handoff_path`, `handoff_blob_sha`, `created_by`, `expires_at`, `requires_human_approval`, `gate_status`.
 
-Only the fixed private repository and trusted account are accepted. Handoffs must be Markdown below `docs/handoffs/` or `docs/dispatch/`. The tool reads the file from `main`, verifies its Git blob SHA and checks for an explicit approved/authorized record. Module 008 implementation remains `BLOCKED_GATE` until the authoritative Module 007 status records independent QA acceptance.
+Only the fixed private repository and trusted account are accepted. Handoffs must be Markdown below `docs/handoffs/` or `docs/dispatch/`. The tool reads the file from `main`, verifies its Git blob SHA and parses anchored canonical fields. Incidental prose and substring matches never authorize implementation.
+
+The current B1 instruction is authorized only when all of these exact fields are present once:
+
+```text
+Status: IMPLEMENTATION APPROVED FOR B1 ONLY
+Owner: Windows Codex Development Window
+Repository: zyyu1/personal-workspace
+```
+
+The status may include the canonical ` — YYYY-MM-DD` suffix and fields may use the documented `**Field:** value` Markdown form. Duplicate, contradictory, differently cased, ambiguous, `DRAFT`, `UNAUTHORIZED`, `NOT AUTHORIZED`, `APPROVED?`, or conditional values fail closed.
+
+Module 008 implementation remains `BLOCKED_GATE` unless future authoritative files provide the following minimum machine-readable evidence. B1 does not create or alter these records:
+
+```text
+# docs/handoffs/007/STATUS.md
+Module: 007
+Independent QA: ACCEPTED
+Implementation Acceptance: ACCEPTED
+Accepted Implementation SHA: <40-hex Module 007 implementation commit>
+Independent QA Report: docs/handoffs/007/<qa-report>.md
+
+# referenced QA report
+Module: 007
+QA Decision: ACCEPTED
+Accepted Implementation SHA: <the same 40-hex commit>
+
+# docs/handoffs/008/STATUS.md
+Module: 008
+Implementation: AUTHORIZED
+Implementation Authorization: ACTIVE
+```
+
+The SHA must not be the A01 shared-platform baseline, must match the independent QA report, and must resolve as a commit in this repository through a bounded read-only GET request. The current 007/008 statuses do not satisfy this contract, so real Module 008 intent remains blocked.
 
 GitHub authorship and `dispatch:approved` are necessary but not sufficient authorization. B1 only classifies; it cannot execute an eligible request.
 
@@ -56,7 +89,7 @@ Use `--no-receipts` to opt out. Receipt corruption fails closed to a new local r
 
 Threats include forged authors/labels, malicious JSON, shell metacharacters, traversal or external URLs, stale/mismatched blobs, expired dispatches, false gate claims, oversized responses, partial pagination, auth/rate-limit failures, replay and secret leakage.
 
-Controls include exact field allowlisting, fixed repo/author/ref, URL/path rejection, SHA pinning, timezone-aware expiry, explicit human-approval flag for implementation mode, authoritative gate reads, bounded API work, subprocess argument arrays with `shell=False`, local atomic bounded receipts and sanitized outputs. The code contains no `codex` invocation and no GitHub write method.
+Controls include exact field allowlisting, fixed repo/author/ref, URL/path rejection, SHA pinning, timezone-aware expiry, explicit human-approval flag for implementation mode, canonical authorization/status fields, cross-file QA/SHA consistency, bounded API work, subprocess argument arrays with `shell=False`, local atomic bounded receipts and sanitized outputs. GitHub Contents data requires `encoding=base64`, exact path/type, a matching Git blob SHA and UTF-8 text. Only ASCII CR/LF/space/tab wrapping is removed before strict Base64 validation. The code contains no `codex` invocation and no GitHub write method.
 
 The listener requires only outgoing HTTPS performed by `gh`; it opens no network port and requests no filesystem/network-listening privilege. It does not add a service, startup item, scheduled task, daemon, watcher or background process.
 
