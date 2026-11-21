@@ -25,7 +25,7 @@ No new Task, Resource, Calendar, Timer, TimeEntry or Study domain store was intr
 
 ## Regression coverage
 
-`src/features/study/Study.test.tsx` now contains 31 tests. Revision 01 adds:
+`src/features/study/Study.test.tsx` now contains 33 tests. Revision 01 adds:
 
 1. shared canonical Resource across Winter/Summer Offerings; unlink one and persist the other link/progress;
 2. imported Resource in one Offering plus manual link in another;
@@ -35,6 +35,8 @@ No new Task, Resource, Calendar, Timer, TimeEntry or Study domain store was intr
 6. Calendar UI CourseOffering/source selector;
 7. area-aware Study and Research project/resource routing, including rendered Global Tasks and Task Inspector links;
 8. material wizard Escape close and launch-focus restoration.
+9. stale Calendar response suppression after project changes;
+10. modal focus retention across asynchronous Resource loading rerenders.
 
 Existing traversal, drive/UNC, symlink, ZIP-bomb ratio, index-only, IndexedDB/canonical identity and modules 001–006 regression tests remain in the full suite.
 
@@ -45,8 +47,8 @@ Existing traversal, drive/UNC, symlink, ZIP-bomb ratio, index-only, IndexedDB/ca
 | `npm run typecheck` | PASS |
 | `npm run lint` | PASS, 0 errors; 12 pre-existing warnings in modules 001–006 |
 | `npm run build` | PASS; production chunks generated |
-| `npm test -- --run` | PASS, 10 files / 135 tests |
-| `npm test -- --run src/features/study/Study.test.tsx` | PASS, 31/31 |
+| `npm test -- --run` | PASS, 10 files / 137 tests |
+| `npm test -- --run src/features/study/Study.test.tsx` | PASS, 33/33 |
 | `git diff --check` | PASS; Git CRLF notices only |
 
 ## Browser evidence
@@ -83,7 +85,7 @@ Existing traversal, drive/UNC, symlink, ZIP-bomb ratio, index-only, IndexedDB/ca
 | 20 | PASS | Import path still has no extraction/execution API. |
 | 21 | PASS | Rejected paths and partial upsert failures retain truthful diagnostics. |
 | 22 | PARTIAL | Mobile behavior and effective-width overflow checks pass; exact 1440/1024/390 capture remains for independent QA. |
-| 23 | PASS | Typecheck, lint, build, 135 tests and diff check pass. |
+| 23 | PASS | Typecheck, lint, build, 137 tests and diff check pass. |
 | 24 | PASS | Scope limited to Revision 01; Module 008/B2B/B3/Queue untouched. |
 
 ## Independent QA focus

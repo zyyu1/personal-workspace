@@ -11,10 +11,11 @@ type PickerWindow=Window&{showDirectoryPicker?:()=>Promise<BrowserDirectoryHandl
 
 export function MaterialImportWizard({offeringId,onClose,onImported,returnFocusTo}:{offeringId:string;onClose:()=>void;onImported:()=>void;returnFocusTo?:HTMLElement|null}){
   const [preview,setPreview]=useState<ManifestPreview>(),[busy,setBusy]=useState(false),[error,setError]=useState(''),[result,setResult]=useState(''),[resources,setResources]=useState<WorkspaceResource[]>([])
-  const fileRef=useRef<HTMLInputElement>(null),closeRef=useRef<HTMLButtonElement>(null),returnFocus=useRef<HTMLElement|null>(null),busyRef=useRef(false)
+  const fileRef=useRef<HTMLInputElement>(null),closeRef=useRef<HTMLButtonElement>(null),returnFocus=useRef<HTMLElement|null>(returnFocusTo??null),busyRef=useRef(false),onCloseRef=useRef(onClose)
   busyRef.current=busy
+  onCloseRef.current=onClose
   useEffect(()=>{void GlobalResourceService.list().then(setResources)},[])
-  useEffect(()=>{returnFocus.current=returnFocusTo??document.activeElement as HTMLElement;closeRef.current?.focus();const handle=(event:KeyboardEvent)=>{if(event.key==='Escape'&&!busyRef.current){event.preventDefault();onClose()}};document.addEventListener('keydown',handle);return()=>{document.removeEventListener('keydown',handle);queueMicrotask(()=>returnFocus.current?.focus())}},[onClose,returnFocusTo])
+  useEffect(()=>{returnFocus.current??=document.activeElement as HTMLElement;closeRef.current?.focus();const handle=(event:KeyboardEvent)=>{if(event.key==='Escape'&&!busyRef.current){event.preventDefault();onCloseRef.current()}};document.addEventListener('keydown',handle);return()=>{document.removeEventListener('keydown',handle);queueMicrotask(()=>returnFocus.current?.focus())}},[])
   const run=async(action:()=>Promise<ManifestPreview>)=>{setBusy(true);setError('');setResult('');try{setPreview(await action())}catch(reason){setError(reason instanceof Error?reason.message:'Source preview failed')}finally{setBusy(false)}}
   const chooseFolder=()=>void run(async()=>{const picker=(window as PickerWindow).showDirectoryPicker;if(!picker)throw new Error('Folder selection is unsupported in this browser. No Local Connector is installed.');return previewFolder(await picker())})
   const confirm=async()=>{if(!preview)return;setBusy(true);setError('');try{const outcome=await StudyCourseService.confirmManifest(offeringId,preview);setResult(outcome.status==='completed'?`Indexed ${outcome.indexed} resources. Re-select the source to open bytes after this session.`:`Import ${outcome.status}: ${outcome.indexed} indexed, ${outcome.failures.length} issues.`);onImported()}catch(reason){setError(reason instanceof Error?reason.message:'Import could not be saved')}finally{setBusy(false)}}
