@@ -12,7 +12,7 @@ export function AppShell({ children, inspector, timer }: { children: ReactNode; 
     <aside className={`sidebar ${mobileNav ? 'is-open' : ''}`} aria-label="Global navigation">
       <div className="brand"><span className="brand-mark">P</span><span>Personal Workspace</span></div>
       <nav>{navigation.map(([Icon, label]) => <button className={label === 'Research' ? 'nav-item active' : 'nav-item'} key={label} disabled={label !== 'Research'} title={label !== 'Research' ? 'Not implemented in this increment' : 'Current area'} aria-current={label === 'Research' ? 'page' : undefined}><Icon size={18}/><span>{label}</span></button>)}</nav>
-      <div className="sidebar-foot"><span className="status-dot"/>Local-first demo</div>
+      <div className="sidebar-foot"><span className="status-dot"/>Demo data · local-first</div>
     </aside>
     {mobileNav && <button className="scrim" aria-label="Close navigation" onClick={() => setMobileNav(false)}/>} 
     <div className="workspace">

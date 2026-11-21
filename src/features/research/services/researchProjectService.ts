@@ -6,7 +6,7 @@ const demoProject: ResearchProject = {
   name: 'Adaptive Research Agents',
   summary: 'Investigating reliable adaptation strategies for research-oriented language agents.',
   status: 'active',
-  tags: ['Agent systems', 'Evaluation', 'Primary: Research'],
+  tags: ['Demo data', 'Agent systems', 'Evaluation', 'Primary: Research'],
   pinned: true,
   currentStage: 'Method design',
   stages: [
