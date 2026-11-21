@@ -1,4 +1,4 @@
-export type RepositoryDomain='tasks'|'resources'|'literature'|'planning'|'experiments'|'submissions'|'time-entries'|'timer-sessions'|'resume-contexts'
+export type RepositoryDomain='tasks'|'resources'|'literature'|'planning'|'experiments'|'submissions'|'time-entries'|'timer-sessions'|'resume-contexts'|'study-courses'
 
 export interface StoredEnvelope<T>{
   domain:RepositoryDomain
