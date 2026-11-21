@@ -1,0 +1,21 @@
+import type { ResearchProject, ResearchTask } from '../types'
+import type { InspectorItem } from '../../../components/Inspector'
+import { ContinueResearch } from '../components/ContinueResearch'
+import { NextActions } from '../components/NextActions'
+import { ProjectProgress } from '../components/ProjectProgress'
+import { RecentLiterature } from '../components/RecentLiterature'
+import { ResearchRoadmap } from '../components/ResearchRoadmap'
+import { TimeInvestment } from '../components/TimeInvestment'
+import { UpcomingMilestones } from '../components/UpcomingMilestones'
+
+export function ResearchOverview({ project, onInspect, onResume }: { project: ResearchProject; onInspect: (item: InspectorItem) => void; onResume: (task?: ResearchTask) => void }) {
+  return <div className="overview-grid">
+    <ContinueResearch context={project.continueContext} onInspect={onInspect} onResume={() => onResume(project.continueContext.lastTask)}/>
+    <ProjectProgress stages={project.stages} currentStage={project.currentStage}/>
+    <NextActions tasks={project.tasks} onOpen={(data) => onInspect({kind:'task',data})}/>
+    <RecentLiterature items={project.literature} onOpen={(data) => onInspect({kind:'paper',data})}/>
+    <TimeInvestment entries={project.timeEntries}/>
+    <ResearchRoadmap stages={project.stages}/>
+    <UpcomingMilestones milestones={project.milestones}/>
+  </div>
+}

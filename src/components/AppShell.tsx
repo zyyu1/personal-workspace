@@ -1,0 +1,42 @@
+import { useState, type ReactNode } from 'react'
+import { BookOpen, BriefcaseBusiness, CalendarDays, CheckSquare, Clock3, FolderKanban, LayoutDashboard, Menu, Search, X } from 'lucide-react'
+
+const navigation = [
+  [LayoutDashboard, 'Dashboard'], [BookOpen, 'Study'], [FolderKanban, 'Research'],
+  [BriefcaseBusiness, 'Work'], [CalendarDays, 'Calendar'], [CheckSquare, 'Tasks'], [FolderKanban, 'Resources'],
+] as const
+
+export function AppShell({ children, inspector, timer }: { children: ReactNode; inspector?: ReactNode; timer: ReactNode }) {
+  const [mobileNav, setMobileNav] = useState(false)
+  return <div className="app-shell">
+    <aside className={`sidebar ${mobileNav ? 'is-open' : ''}`} aria-label="Global navigation">
+      <div className="brand"><span className="brand-mark">P</span><span>Personal Workspace</span></div>
+      <nav>{navigation.map(([Icon, label]) => <button className={label === 'Research' ? 'nav-item active' : 'nav-item'} key={label}><Icon size={18}/><span>{label}</span></button>)}</nav>
+      <div className="sidebar-foot"><span className="status-dot"/>Local-first demo</div>
+    </aside>
+    {mobileNav && <button className="scrim" aria-label="Close navigation" onClick={() => setMobileNav(false)}/>} 
+    <div className="workspace">
+      <header className="topbar">
+        <button className="icon-button mobile-menu" aria-label={mobileNav ? 'Close menu' : 'Open menu'} onClick={() => setMobileNav(!mobileNav)}>{mobileNav ? <X/> : <Menu/>}</button>
+        <div className="search"><Search size={17}/><span>Search projects, tasks, papers…</span><kbd>⌘ K</kbd></div>
+        <button className="quick-add">Add new</button>
+      </header>
+      <div className={`content-frame ${inspector ? 'with-inspector' : ''}`}>
+        <main className="main-content">{children}</main>
+        {inspector}
+      </div>
+    </div>
+    {timer}
+  </div>
+}
+
+export function MiniTimer({ running, label, seconds, onToggle, onStop }: { running: boolean; label?: string; seconds: number; onToggle: () => void; onStop: () => void }) {
+  const mm = String(Math.floor(seconds / 60)).padStart(2, '0')
+  const ss = String(seconds % 60).padStart(2, '0')
+  return <div className={`mini-timer ${running ? 'running' : ''}`}>
+    <div><span className="eyebrow">Focus timer</span><strong>{label ?? 'No active task'}</strong></div>
+    <time>{mm}:{ss}</time>
+    <button className="timer-toggle" onClick={onToggle}><Clock3 size={16}/>{running ? 'Pause' : 'Start'}</button>
+    {seconds > 0 && <button className="timer-stop" onClick={onStop}>Finish</button>}
+  </div>
+}
