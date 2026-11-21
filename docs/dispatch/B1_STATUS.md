@@ -19,14 +19,14 @@
 - **Scope:** Operator-invoked Python `--once --dry-run` read-only GitHub Issues classifier and strict gates only, under `tools/dispatch-inbox/`
 - **Remediation Findings:** B1-QA-001, B1-QA-002, B1-QA-003 independently CLOSED; no new blocking code issue identified
 - **Test Evidence:** B1 40/40 PASS, existing 104/104 PASS; typecheck/build/compile PASS; lint 0 errors and 12 historical warnings
-- **Windows Host Verification:** **FAIL (2026-11-21)** — Windows 10 Pro, Python 3.13.2, preferred encoding `cp936`; official GitHub CLI `2.105.0` installed and authenticated, private repo GET PASS. One real `--once --dry-run --no-receipts` poll exited **1** without classification due to locale-dependent `subprocess.run(text=True)` UTF-8 decoding failure and subsequent `stdout=None` AttributeError. Evidence: https://github.com/zyyu1/personal-workspace/issues/4#issuecomment-7062988330.
+- **Windows Host Verification:** **PASS (2026-11-21, Revision 02; B1 OPERATIONAL GATE ACCEPTED)** — Windows 10 Pro, Python 3.13.2, preferred encoding `cp936`, official GitHub CLI `2.105.0`, authenticated private GET PASS. One controlled real `--once --dry-run --no-receipts` poll exited **0**, ordinary Issue #4 classified `REJECTED_UNTRUSTED / APPROVAL_LABEL_MISSING` as expected; working tree clean, no encoding workaround, no receipts, Codex calls, poller GitHub writes or service. Evidence: https://github.com/zyyu1/personal-workspace/issues/4#issuecomment-7063375466; Design Window acceptance: https://github.com/zyyu1/personal-workspace/issues/4#issuecomment-7063391810. Previous Revision 01 host FAIL is preserved in Issue #4 history.
 - **B1 Automatic Operation:** NOT ENABLED — code merger does not install, schedule or run a listener on Windows
-- **B2:** BLOCKED — requires successful real authenticated B1 Windows smoke, design decision, security/retry/ACK model and separate approval/independent QA.
+- **B2:** BLOCKED / NOT AUTHORIZED — B1 host smoke passed, but future automatic dispatch requires separate user/design approval, full delivery/retry/ACK security design, independent implementation QA and real-host verification.
 - **B3:** BLOCKED — requires additional authorization and actual authenticated delivery/ACK controls
 - **Module 007:** Existing independent implementation QA acceptance not recorded by this B1 activity; no Module 007 code work authorized by B1
 - **Module 008:** NOT STARTED / BLOCKED BY MODULE 007 independently QA-accepted implementation
 - **Revision 02:** **CODE QA ACCEPTED / MERGED** — PR #6 candidate `4926d31befd814be6392498c167529d2a6b2241a`, merge `fad4bfb94d685111694c341fc4be10556de339f4`; independent QA 12/12 PASS, B1 Python tests 47/47 PASS, workspace tests 104/104 PASS. Windows real retest NOT YET RUN.
-- **Next Action:** The Windows execution operator reads `docs/dispatch/B1_WINDOWS_HOST_SMOKE_REV02.md`, runs only the separately authorized one-time authenticated `--once --dry-run --no-receipts` real host poll on updated main, posts sanitized evidence to Issue #4 and stops. No B2/B3 activation.
+- **Next Action:** B1 work is complete; do not rerun the already completed one-time smoke or enable an automatic listener. Await explicit future B2 design authorization; Module 008 remains blocked until Module 007 independent QA acceptance.
 
 **Security boundary:** Accepting and merging B1 code does **not** authorize executing remote instructions, sending `codex queue`, starting background services/Task Scheduler, writing to GitHub from the poller, merging future modules, or activating B2/B3. The initial B0 probe verified targeted delivery, not unattended dispatch.
 
@@ -36,5 +36,17 @@
 - **Design Window Acceptance:** https://github.com/zyyu1/personal-workspace/pull/6#issuecomment-7063318650
 - **Merge commit:** `fad4bfb94d685111694c341fc4be10556de339f4`
 - **Host Retry Instruction:** `docs/dispatch/B1_WINDOWS_HOST_SMOKE_REV02.md`
-- **Operational Result:** PENDING / PRIOR FAIL still stands until the new Windows real host smoke is independently verified.
+- **Operational Result:** **PASS — verified by Design Window**, Issue #4 comment `7063391810`, after one real cp936 Windows read-only poll. Previous FAIL remains as historical evidence in Issue #4.
 - **B2/B3:** NOT AUTHORIZED.
+
+## Revision 02 Windows Host Retest — Final Acceptance (2026-11-21)
+
+- **Host:** Windows 10 Pro 22H2, Python 3.13.2, `gh` 2.105.0, `cp936` preferred encoding; no UTF-8 environment workaround
+- **Verified main HEAD:** `217ab6130a8c69e13d2ee62b5d6e4774d0e822f8`; Revision 02 merge `fad4bfb94d685111694c341fc4be10556de339f4` is an ancestor
+- **Read-only GitHub private GET:** PASS
+- **Single dry-run command:** `py -3.13 tools/dispatch-inbox/dispatch_inbox.py --once --dry-run --no-receipts`
+- **Exit / classification:** `0`; `REJECTED_UNTRUSTED / APPROVAL_LABEL_MISSING` (ordinary issue, expected and safe)
+- **Safety:** No codepage workaround, project changes, GitHub mutations from poller, local receipts, Codex calls, background service, Task Scheduler, or automatic delivery
+- **Operator report:** https://github.com/zyyu1/personal-workspace/issues/4#issuecomment-7063375466
+- **Design Window final approval:** https://github.com/zyyu1/personal-workspace/issues/4#issuecomment-7063391810
+- **Scope:** Acceptance of the operator-invoked **B1 read-only classifier only**. Continuous watching, approved live task ingestion, automated Codex delivery, acknowledgement/retry and B2/B3 remain unimplemented and unauthorized.
