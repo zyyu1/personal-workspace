@@ -1,5 +1,5 @@
 import type { Priority, ResearchTask, TaskStatus, TaskType } from '../features/research/types'
-import { createVersionedRepository, notFoundFailure, stableId, unwrapMutation } from '../data/persistence'
+import { createVersionedRepository, notFoundFailure, stableId, unwrapMutation, validationFailure } from '../data/persistence'
 
 const seedTasks:ResearchTask[]=[
   {id:'t1',projectId:'adaptive-agents',title:'Refine the evaluation protocol',status:'in-progress',stage:'Method design',dueDate:'2026-11-24',priority:'high',taskType:'analysis',paperIds:['demo-library:REFLEX2'],dailyAssignments:[{id:'day-t1',taskId:'t1',projectId:'adaptive-agents',date:'2026-11-22'}],plannedSessions:[{id:'session-t1-a',taskId:'t1',projectId:'adaptive-agents',start:'2026-11-22T09:30',end:'2026-11-22T10:30'},{id:'session-t1-b',taskId:'t1',projectId:'adaptive-agents',start:'2026-11-24T14:00',end:'2026-11-24T14:45'}],resourceLinks:[{id:'task-resource-t1',resourceId:'resource-eval-config',label:'evaluation-config.yaml',kind:'file',available:false}]},
@@ -11,12 +11,17 @@ const seedTasks:ResearchTask[]=[
 
 const copy=<T>(value:T):T=>structuredClone(value)
 const repository=createVersionedRepository<ResearchTask[]>({domain:'tasks',schemaVersion:1,seedVersion:1,seed:()=>copy(seedTasks)})
+type CreateTaskValues={projectId:string;title:string;stage:string;taskType:TaskType;priority?:Priority;dueDate?:string;paperIds?:string[];area?:'research'|'study'|'work';resourceLinks?:ResearchTask['resourceLinks']}
 
 export const GlobalTaskService={
   async list(projectId?:string){const tasks=await repository.getState();return copy(projectId?tasks.filter(task=>task.projectId===projectId):tasks)},
   async get(id:string){const tasks=await repository.getState(),task=tasks.find(item=>item.id===id);return task?copy(task):undefined},
-  async create(values:{projectId:string;title:string;stage:string;taskType:TaskType;priority?:Priority;dueDate?:string;paperIds?:string[];area?:'research'|'study'|'work';resourceLinks?:ResearchTask['resourceLinks']}){
+  async create(values:CreateTaskValues){
     const result=await repository.mutate(tasks=>{const task:ResearchTask={id:stableId('task'),status:'todo',dailyAssignments:[],plannedSessions:[],...values};return{state:[...tasks,task],value:task}})
+    return unwrapMutation(result)
+  },
+  async ensure(id:string,values:CreateTaskValues){
+    const result=await repository.mutate(tasks=>{const existing=tasks.find(task=>task.id===id);if(existing){if(existing.projectId!==values.projectId||existing.area!==values.area)throw validationFailure('Canonical Task identity belongs to a different context');return{state:tasks,value:existing}}const task:ResearchTask={id,status:'todo',dailyAssignments:[],plannedSessions:[],...values};return{state:[...tasks,task],value:task}})
     return unwrapMutation(result)
   },
   async update(id:string,values:Partial<Pick<ResearchTask,'title'|'status'|'stage'|'taskType'|'priority'|'dueDate'|'paperIds'>>){

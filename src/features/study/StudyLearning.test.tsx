@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { MemoryPersistenceAdapter, WorkspacePersistence } from '../../data/persistence'
 import { GlobalResourceService } from '../../services/globalResourceService'
@@ -48,6 +48,21 @@ describe('Module 008 schema and canonical identities',()=>{
     await StudyLearningService.setUnitProgress(offeringId,unit.id,{studyState:'in_progress',masteryState:'practicing'});await StudyLearningService.logAttempt(offeringId,item.id,{outcome:'partial'})
     StudyLearningService.invalidate()
     expect(await StudyLearningService.getSnapshot(offeringId)).toMatchObject({units:[{id:unit.id}],sets:[{id:set.id}],items:[{id:item.id}],attempts:[{exerciseItemId:item.id,outcome:'partial'}],progress:[{targetId:unit.id}]})
+  })
+
+  it('preserves omitted patch metadata, persists it, and only clears explicit optional fields',async()=>{
+    const unit=await StudyLearningService.createUnit(offeringId,{title:'State space',code:'ST-1',description:'Saved description'}),set=await StudyLearningService.createSet(offeringId,{title:'Sheet 1',setCode:'S-1',kind:'exercise'}),item=await StudyLearningService.createItem(offeringId,set.id,{itemCode:'A1',title:'Saved title',sourcePointer:'p. 4'}),attempt=await StudyLearningService.logAttempt(offeringId,item.id,{outcome:'partial',notes:'Saved note',difficulty:'hard'})
+    await StudyLearningService.updateUnit(offeringId,unit.id,{includeInCoverage:false});await StudyLearningService.updateSet(offeringId,set.id,{kind:'tutorial'});await StudyLearningService.updateItem(offeringId,item.id,{includeInCoverage:false});await StudyLearningService.reviseAttempt(offeringId,attempt.id,{outcome:'correct'})
+    StudyLearningService.invalidate()
+    const saved=await StudyLearningService.getSnapshot(offeringId)
+    expect(saved?.units[0]).toMatchObject({code:'ST-1',description:'Saved description',includeInCoverage:false})
+    expect(saved?.sets[0]).toMatchObject({setCode:'S-1',kind:'tutorial'})
+    expect(saved?.items[0]).toMatchObject({title:'Saved title',sourcePointer:'p. 4',includeInCoverage:false})
+    expect(saved?.attempts[0]).toMatchObject({notes:'Saved note',difficulty:'hard',outcome:'correct'})
+    await StudyLearningService.updateUnit(offeringId,unit.id,{code:' '});await StudyLearningService.updateSet(offeringId,set.id,{setCode:''});await StudyLearningService.updateItem(offeringId,item.id,{title:'',sourcePointer:' '});await StudyLearningService.reviseAttempt(offeringId,attempt.id,{notes:''})
+    StudyLearningService.invalidate()
+    const cleared=await StudyLearningService.getSnapshot(offeringId)
+    expect(cleared?.units[0].code).toBeUndefined();expect(cleared?.sets[0].setCode).toBeUndefined();expect(cleared?.items[0]).toMatchObject({title:undefined,sourcePointer:undefined});expect(cleared?.attempts[0].notes).toBeUndefined()
   })
 })
 
@@ -136,11 +151,21 @@ describe('exercise identity, attempts, and integrations',()=>{
     expect((await StudyCourseService.getOffering(offeringId))?.progress.find(row=>row.targetId===resource.id)).toMatchObject({id:expect.any(String),resourceId:resource.id,state:'reviewed',studyState:'studied'})
   })
 
-  it('creates one canonical Global Task per target and does not start a timer',async()=>{
-    const unit=await StudyLearningService.createUnit(offeringId,{title:'Reachability'}),first=await StudyLearningService.createTask(offeringId,'learning-unit',unit.id,'Study reachability'),again=await StudyLearningService.createTask(offeringId,'learning-unit',unit.id,'Duplicate')
-    expect(again.id).toBe(first.id)
+  it('creates one canonical Global Task per target across concurrent and repeated calls',async()=>{
+    const unit=await StudyLearningService.createUnit(offeringId,{title:'Reachability'}),[first,concurrent]=await Promise.all([StudyLearningService.createTask(offeringId,'learning-unit',unit.id,'Study reachability'),StudyLearningService.createTask(offeringId,'learning-unit',unit.id,'Concurrent duplicate')]),again=await StudyLearningService.createTask(offeringId,'learning-unit',unit.id,'Repeated duplicate')
+    expect(concurrent.id).toBe(first.id);expect(again.id).toBe(first.id)
     expect((await GlobalTaskService.list(offeringId)).filter(row=>row.id===first.id)).toHaveLength(1)
+    expect((await StudyLearningService.getSnapshot(offeringId))?.evidenceLinks.filter(row=>row.targetId===unit.id&&row.taskId===first.id)).toHaveLength(1)
     expect(first).toMatchObject({area:'study',projectId:offeringId})
+  })
+
+  it('reports a partial Task relation failure and reconciles the same canonical Task on retry',async()=>{
+    const unit=await StudyLearningService.createUnit(offeringId,{title:'Recovery'}),mutation=vi.spyOn(StudyRepository,'mutate').mockResolvedValueOnce({ok:false,error:{code:'persistence-unavailable',message:'Injected Study relation failure',retryable:true}})
+    await expect(StudyLearningService.createTask(offeringId,'learning-unit',unit.id,'Study recovery')).rejects.toThrow(/was created.*retry to reconcile/i)
+    mutation.mockRestore()
+    const persisted=(await GlobalTaskService.list(offeringId)).filter(row=>row.id.includes(unit.id));expect(persisted).toHaveLength(1)
+    const recovered=await StudyLearningService.createTask(offeringId,'learning-unit',unit.id,'Study recovery')
+    expect(recovered.id).toBe(persisted[0].id);expect((await GlobalTaskService.list(offeringId)).filter(row=>row.id===recovered.id)).toHaveLength(1);expect((await StudyLearningService.getSnapshot(offeringId))?.evidenceLinks.filter(row=>row.taskId===recovered.id)).toHaveLength(1)
   })
 
   it('restores deep links for units and exercises and falls back after archive',async()=>{
@@ -157,7 +182,7 @@ describe('Module 008 responsive UI entry points',()=>{
     render(<MemoryRouter initialEntries={[`/study/courses/${offeringId}/progress`]}><CourseWorkspace offeringId={offeringId} section="progress" onStartTimer={()=>undefined}/></MemoryRouter>)
     expect(await screen.findByRole('heading',{name:'Course structure'})).toBeInTheDocument()
     fireEvent.change(screen.getByRole('textbox',{name:'New learning unit'}),{target:{value:'Controllability'}});fireEvent.click(screen.getByRole('button',{name:/Add unit/}))
-    await waitFor(()=>expect(screen.getByRole('button',{name:/Controllability/})).toBeInTheDocument());fireEvent.keyDown(window,{key:'Escape'});const trigger=screen.getByRole('button',{name:/Controllability/});fireEvent.click(trigger)
+    const newUnitInput=screen.getByRole('textbox',{name:'New learning unit'});await waitFor(()=>expect(screen.getByRole('button',{name:/Controllability/})).toBeInTheDocument());expect(await screen.findByRole('complementary',{name:'Learning unit inspector'})).toBeInTheDocument();fireEvent.keyDown(window,{key:'Escape'});await waitFor(()=>expect(newUnitInput).toHaveFocus());const trigger=screen.getByRole('button',{name:/Controllability/});fireEvent.click(trigger)
     expect(await screen.findByRole('complementary',{name:'Learning unit inspector'})).toBeInTheDocument()
     fireEvent.keyDown(window,{key:'Escape'});await waitFor(()=>expect(screen.queryByRole('complementary',{name:'Learning unit inspector'})).not.toBeInTheDocument());expect(trigger).toHaveFocus()
   })
@@ -167,5 +192,19 @@ describe('Module 008 responsive UI entry points',()=>{
     render(<MemoryRouter initialEntries={[`/study/courses/${offeringId}/exercises`]}><CourseWorkspace offeringId={offeringId} section="exercises" onStartTimer={()=>undefined}/></MemoryRouter>)
     expect(await screen.findByRole('heading',{name:'Exercise sets and attempts'})).toBeInTheDocument();fireEvent.click(await screen.findByRole('button',{name:/A2\(c\)/}))
     expect(await screen.findByRole('complementary',{name:'Exercise inspector'})).toBeInTheDocument()
+  })
+
+  it('restores focus to Add item after create auto-opens and Escape closes the inspector',async()=>{
+    await StudyLearningService.createSet(offeringId,{title:'Sheet 3',kind:'exercise'})
+    render(<MemoryRouter initialEntries={[`/study/courses/${offeringId}/exercises`]}><CourseWorkspace offeringId={offeringId} section="exercises" onStartTimer={()=>undefined}/></MemoryRouter>)
+    await screen.findByRole('heading',{name:'Exercise sets and attempts'});const newItemInput=await screen.findByRole('textbox',{name:'Exercise item code'});fireEvent.change(newItemInput,{target:{value:'B1'}});fireEvent.click(screen.getByRole('button',{name:/Add item/}))
+    expect(await screen.findByRole('complementary',{name:'Exercise inspector'})).toBeInTheDocument();fireEvent.keyDown(window,{key:'Escape'});await waitFor(()=>expect(newItemInput).toHaveFocus())
+  })
+
+  it('projects exercises and review count on Overview when learning units are not configured',async()=>{
+    const set=await StudyLearningService.createSet(offeringId,{title:'Overview sheet',kind:'exercise'}),item=await StudyLearningService.createItem(offeringId,set.id,{itemCode:'O1'});await StudyLearningService.setItemProgress(offeringId,item.id,{solveState:'solved',needsReview:true})
+    render(<MemoryRouter initialEntries={[`/study/courses/${offeringId}/overview`]}><CourseWorkspace offeringId={offeringId} section="overview" onStartTimer={()=>undefined}/></MemoryRouter>)
+    const card=(await screen.findByRole('heading',{name:'Canonical course progress'})).closest('section')!;expect(within(card).getByText('Learning units').nextElementSibling).toHaveTextContent('Not configured');expect(within(card).getByText('Exercises').nextElementSibling).toHaveTextContent('1/1 solved');expect(within(card).getByText('Review queue').nextElementSibling).toHaveTextContent('1')
+    StudyLearningService.invalidate();expect((await StudyLearningService.queryProgress(offeringId)).exercise).toMatchObject({tracked:1,solved:1,toRetry:1})
   })
 })
