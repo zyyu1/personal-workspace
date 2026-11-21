@@ -9,7 +9,8 @@
 - **B2A Implementation:** **CODE ACCEPTED / MERGED INTO `main`** — PR #9 Revision 01 accepted candidate `cba80fa7eabb55abf0c928e68ddad622e38a6516`, merge commit `ca68d1c1f952b3766647e2810e72483dfd5cef2c`; default-disabled notification sender, not running automatically
 - **B2A Independent QA:** **ACCEPTED FOR CODE** — Revision 01 23 PASS / 0 FAIL / 1 NOT VERIFIED; original candidate REJECTED, B2A-QA-001 High CLOSED. QA: https://github.com/zyyu1/personal-workspace/pull/9#issuecomment-7064087898
 - **B2A Real Windows Host Queue Probe:** **PASS / MANUAL SAME-THREAD ACK ACCEPTED (2026-11-21)** — one authorized queue submission (`QUEUE_SUBMITTED`, exit 0) was followed by the user's exact matching nonce ACK pasted into the Design Window chat and explicit confirmation that they observed/copied it from the original Windows Codex Desktop execution thread. This is **human-attested** evidence, not machine-verified Codex telemetry. Acceptance: https://github.com/zyyu1/personal-workspace/issues/10#issuecomment-7064353100. QA #24 ACCEPTED for the scoped one-shot probe. Approval label revoked; no resend or further dispatch authorized.
-- **B2B Unattended Windows Polling:** NOT AUTHORIZED / NOT INSTALLED
+- **B2B V1.1 On-Demand Bridge:** **DESIGN APPROVED / CODE-ONLY DEVELOPMENT AUTHORIZED** on 2026-11-21; user explicitly rejected unattended/scheduled polling. Approved design: `docs/dispatch/B2B_ON_DEMAND_DESIGN_APPROVED.md`; code-only instruction: `docs/dispatch/B2B_ON_DEMAND_EXECUTION_INSTRUCTION.md`; work order: Issue #12. Implementation/QA pending; **NO live queue, Windows shortcut installation or idle background process authorized**.
+- **B2B V1.0 Unattended Windows Polling:** REJECTED AS USER REQUIREMENT / NEVER AUTHORIZED / NOT INSTALLED
 - **B3 Automatic Implementation Routing:** NOT AUTHORIZED
 - **B0 Existing-Session Probe:** ACCEPTED — `codex queue` reached same original Windows Desktop thread, Issue #3
 - **B1 Inbox:** OPERATIONAL GATE ACCEPTED (2026-11-21) — B1 and UTF-8 Revision 02 merged, real Windows `cp936` read-only smoke PASS, Issue #4
@@ -101,3 +102,22 @@ The earlier one-time probe authorization was consumed; the status above supersed
 - **Next design gate:** **B2B automatic polling**, only with a new user decision, formal scoped design, independent QA, durable deduplication, disable/uninstall control and separately approved real-host tests.
 
 B2A PASS applies only to the one authorized supervised notification. It **does not prove** continuous unattended delivery, automatic ACK verification or permission to start arbitrary development tasks.
+
+## B2B V1.1 — User-Approved On-Demand Architecture (2026-11-21)
+
+- **User instruction:** “我不希望后台一直挂着，我希望只有在提出需求的时候才执行”; user subsequently confirmed **“可以”** to the *one-click on-demand receiver* alternative.
+- **Design freeze:** `docs/dispatch/B2B_ON_DEMAND_DESIGN_APPROVED.md` on `main` — no periodic polling, no watcher, no Windows Task Scheduler, no service, no logon autorun.
+- **Code development authority:** `docs/dispatch/B2B_ON_DEMAND_EXECUTION_INSTRUCTION.md`; **code/mocked tests/independent Review Only QA only**. GitHub Issue #12: https://github.com/zyyu1/personal-workspace/issues/12
+- **Historical Draft PR #11:** Original 2-minute scheduler proposal was replaced by an on-demand V1.1 revision, which is now superseded by the approved frozen design on `main`. Do not merge historical draft contents.
+- **User-facing interaction:** Design Window publishes a duly authorized GitHub notification; **user explicitly clicks one Windows receive shortcut** (or triggers the equivalent one-shot local command); receiver validates/fetches/submits at most once to original pinned Desktop Codex thread, then exits.
+- **Honest trigger limitation:** With no local watcher, scheduler or separately proven remote-execution channel, posting a GitHub Issue from ChatGPT **cannot** automatically awaken Windows. V1.1 eliminates manual task-text copy/paste, not the one local click.
+- **Notification policy:** `probe|notify` only; `implement` always rejected. B2A strict v2 types, frozen main record/handoff SHA, unique active authorization, local UUID, durable PREPARED, dedupe/UNKNOWN_DELIVERY and fail-closed checks remain required.
+- **Current delivery status:** B2A one-shot original-thread ACK accepted by user-attested observation. Original Issue #10 CLOSED, consumed approval revoked; Outbox must be preserved.
+- **B2B code:** NOT STARTED / QA PENDING / PR NOT SUBMITTED as of this decision.
+- **Windows shortcut:** NOT INSTALLED; separately approve disabled/local host staging after code QA.
+- **B2B pilot:** NOT AUTHORIZED / NOT RUN; requires a *new* approved harmless notification and separate operator-controlled host test after code QA.
+- **B2B everyday use:** NOT ENABLED; requires future user opt-in after pilot.
+- **B3:** NOT AUTHORIZED. Modules 007/008 implementation remains outside B2B; Module 008 blocked by Module 007 independent QA.
+- **Next action:** Existing Windows Codex development window reads Issue #12 and both approved source-of-truth documents, develops only code + mocks on new `codex/dispatch-b2b-on-demand` branch, requests independent Review Only QA and stops without merge or real send.
+
+**No background process, periodic listener or live Codex queue was activated by the B2B V1.1 design confirmation.**
