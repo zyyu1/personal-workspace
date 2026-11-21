@@ -50,3 +50,11 @@ The historical REJECTED candidate and Remediation authorization above remain pre
 - **Module 008:** No code started; the code acceptance/merge prerequisite is now met, but **implementation is NOT automatically authorized**. Separately confirm the accepted 007 domain interfaces and issue a new explicit Design Window start decision before any Module 008 work. Module 008's own status is authoritative for its approval gate.
 - **B2B:** user-requested on-demand workstream remains paused; no periodic listener, scheduler, or automatic delivery was activated. **B3 / real Codex Queue:** NOT AUTHORIZED.
 - All earlier rejection, remediation and merge-hold sections are retained as chronological history. **This most recent section supersedes their outdated point-in-time current status.**
+
+## Module 007 Native Windows Folder Picker — Supervised Host QA Authorized (2026-11-21)
+
+- **User order:** Complete Module 007 host acceptance **before** starting Module 008.
+- **Exact new host QA authority:** [`docs/handoffs/007/MODULE_007_WINDOWS_PICKER_HOST_QA_INSTRUCTION.md`](https://github.com/zyyu1/personal-workspace/blob/main/docs/handoffs/007/MODULE_007_WINDOWS_PICKER_HOST_QA_INSTRUCTION.md); tracking [Issue #16](https://github.com/zyyu1/personal-workspace/issues/16#issuecomment-7066306276).
+- **Permitted:** Supervised, disposable user-owned test folder, manual real Windows Edge/Chrome `showDirectoryPicker` user grant, index-only preview/confirmation, same-session IndexedDB reload, source SHA256 no-write check, documented cancellation/permission scenarios, sanitized operator evidence and **independent Review Only QA**.
+- **Current evidence:** **NOT YET PROVIDED / MATRIX #4 STILL PARTIAL**. Host QA authorization does not imply real picker PASS. Full operational Module 007 acceptance and closure of Issue #16 require independent actual host QA and a Design Window final decision.
+- **No permission:** No source edit, no automated native-picker interaction, no B2B/B3/Queue, no background service, and **no Module 008 implementation until this outstanding gate is resolved and separately authorized**.
