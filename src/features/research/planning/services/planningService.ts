@@ -1,6 +1,7 @@
 import { GlobalTaskService } from '../../../../services/globalTaskService'
 import type { ResearchTask, TimeEntry } from '../../types'
 import type { FixedCalendarEvent, PlanningSnapshot, ResearchMilestone, ResearchStage, ReviewRow } from '../types'
+import { SubmissionService } from '../../submissions/services/submissionService'
 
 const initialStages:ResearchStage[]=[
   {id:'s1',projectId:'adaptive-agents',name:'Literature review',order:1,status:'completed',startDate:'2026-10-01',endDate:'2026-11-10'},
@@ -16,7 +17,6 @@ const initialMilestones:ResearchMilestone[]=[
 ]
 const events:FixedCalendarEvent[]=[
   {id:'event-review',projectId:'adaptive-agents',title:'Methods review meeting',start:'2026-11-24T11:00',end:'2026-11-24T11:45',kind:'fixed-event'},
-  {id:'event-submission',projectId:'adaptive-agents',title:'Target venue submission',start:'2027-02-28T23:59',end:'2027-02-28T23:59',kind:'submission-deadline',timezone:'America/Los_Angeles',verification:'unverified',sourceUrl:'https://example.org/official-deadline-pending-verification'},
 ]
 const entries:TimeEntry[]=[
   {id:'e1',projectId:'adaptive-agents',taskId:'t1',stageId:'s2',date:'2026-11-17',minutes:72},
@@ -32,7 +32,9 @@ const duration=(start:string,end:string)=>Math.max(0,(new Date(end).getTime()-ne
 export const PlanningService={
   async getSnapshot(projectId:string):Promise<PlanningSnapshot>{
     await new Promise(resolve=>setTimeout(resolve,100))
-    return {demoData:true,offline:false,tasks:await GlobalTaskService.list(projectId),stages:copy(stages.filter(stage=>stage.projectId===projectId).sort((a,b)=>a.order-b.order)),milestones:copy(milestones.filter(item=>item.projectId===projectId)),events:copy(events.filter(item=>item.projectId===projectId)),timeEntries:copy(entries.filter(item=>item.projectId===projectId))}
+    const submissionData=await SubmissionService.getSnapshot(projectId),opportunityIds=new Set(submissionData.targets.map(target=>target.opportunityId))
+    const canonicalDeadlines:FixedCalendarEvent[]=submissionData.deadlines.filter(deadline=>opportunityIds.has(deadline.opportunityId)&&deadline.utcInstant&&deadline.calendarItemId).map(deadline=>{const opportunity=submissionData.opportunities.find(item=>item.id===deadline.opportunityId),venue=submissionData.venues.find(item=>item.id===opportunity?.venueId),source=submissionData.evidence.find(item=>item.id===deadline.evidenceId);return{id:deadline.calendarItemId!,projectId,title:`${venue?.canonicalName} · ${deadline.eventType} (Demo)`,start:deadline.utcInstant!,end:deadline.utcInstant!,kind:'submission-deadline',timezone:deadline.originalTimezone,verification:deadline.verificationStatus==='verified'?'verified':'unverified',sourceUrl:source?.url}})
+    return {demoData:true,offline:false,tasks:await GlobalTaskService.list(projectId),stages:copy(stages.filter(stage=>stage.projectId===projectId).sort((a,b)=>a.order-b.order)),milestones:copy(milestones.filter(item=>item.projectId===projectId)),events:copy([...events.filter(item=>item.projectId===projectId),...canonicalDeadlines]),timeEntries:copy(entries.filter(item=>item.projectId===projectId))}
   },
   createTask:GlobalTaskService.create.bind(GlobalTaskService),
   updateTask:GlobalTaskService.update.bind(GlobalTaskService),

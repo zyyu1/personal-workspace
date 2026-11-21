@@ -2,7 +2,7 @@ export type ResourceSourceKind='reference'|'managed'|'connected'
 export type ResourceOrigin='local'|'zotero'|'github'|'managed'|'external'
 export type ByteAvailability='available-here'|'available-managed'|'available-provider'|'another-device'|'missing'|'permission-required'|'unknown'
 export type MetadataSyncState='synced'|'pending'|'offline'|'conflict'|'error'|'not-connected'
-export type ResourceEntityType='project'|'task'|'paper'|'experiment'|'run'|'milestone'|'output'
+export type ResourceEntityType='project'|'task'|'paper'|'experiment'|'run'|'milestone'|'output'|'target'|'submission'
 export type ResourceAvailability='available'|'windows-only'|'unavailable'|'external'
 export interface ResourceLocation{id:string;resourceId:string;provider:string;deviceId?:string;opaqueLocator:string;accessKind:'local-reference'|'managed-copy'|'provider-link';byteAvailability:ByteAvailability;size?:string;fingerprint?:string;sourceVersion?:string;lastCheckedAt?:string}
 export interface ResourceLink{id:string;resourceId:string;entityType:ResourceEntityType;entityId:string;relationRole:string;createdAt:string;label?:string}

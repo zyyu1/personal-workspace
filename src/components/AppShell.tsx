@@ -14,6 +14,7 @@ export function AppShell({ children, inspector, timer }: { children: ReactNode; 
     <aside className={`sidebar ${mobileNav ? 'is-open' : ''}`} aria-label="Global navigation">
       <div className="brand"><span className="brand-mark">P</span><span>Personal Workspace</span></div>
       <nav>{navigation.map(([Icon, label]) => {const enabled=label==='Research'||label==='Resources',active=label==='Resources'?location.pathname==='/resources':location.pathname.startsWith('/research');return <button className={active?'nav-item active':'nav-item'} key={label} disabled={!enabled} title={!enabled?'Not implemented in this increment':label} aria-current={active?'page':undefined} onClick={()=>{navigate(label==='Resources'?'/resources':'/research/projects/adaptive-agents/overview');setMobileNav(false)}}><Icon size={18}/><span>{label}</span></button>})}</nav>
+      {location.pathname.startsWith('/research')&&<div className="research-shortcuts"><span>Research</span><button className={location.pathname==='/research/venues'?'active':''} onClick={()=>{navigate('/research/venues');setMobileNav(false)}}>Venue Explorer</button><button className={location.pathname.includes('/submissions')?'active':''} onClick={()=>{navigate('/research/projects/adaptive-agents/submissions');setMobileNav(false)}}>Submissions</button></div>}
       <div className="sidebar-foot"><span className="status-dot"/>Demo data · local-first</div>
     </aside>
     {mobileNav && <button className="scrim" aria-label="Close navigation" onClick={() => setMobileNav(false)}/>} 

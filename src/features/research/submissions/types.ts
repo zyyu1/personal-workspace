@@ -1,0 +1,24 @@
+export type VenueType='conference'|'journal'|'workshop'|'special-issue'
+export type VerificationStatus='verified'|'unverified'|'changed'|'superseded'|'needs-recheck'
+export type TemporalStatus='upcoming'|'passed'|'unknown'
+export type DatePrecision='exact'|'date-only'|'time-unknown'|'zone-unknown'|'tba'|'rolling'
+export type TargetReadiness='considering'|'preparing'|'ready'|'not-pursuing'
+export type SubmissionStatus='draft'|'submitted'|'under-review'|'revision-requested'|'rebuttal'|'accepted'|'rejected'|'withdrawn'
+export type RequirementState='unchecked'|'done'|'not-applicable'|'needs-review'
+
+export interface Venue{id:string;canonicalName:string;type:VenueType;aliases:string[];officialSite?:string;topics:string[]}
+export interface VenueEdition{id:string;venueId:string;year?:number;label:string;location?:string}
+export interface VenueTrack{id:string;venueId:string;editionId?:string;name:string;submissionType:string}
+export interface SourceEvidence{id:string;url?:string;sourceType:'official'|'community'|'manual';fetchedAt:string;verifiedAt?:string;verifiedBy?:string;fingerprint?:string;note?:string}
+export interface DeadlineRevision{id:string;revision:number;originalLocalDatetime?:string;originalTimezone?:string;utcInstant?:string;recordedAt:string;evidenceId:string;supersedesId?:string;note?:string}
+export interface DeadlineEvent{id:string;opportunityId:string;trackId?:string;eventType:string;datePrecision:DatePrecision;originalLocalDatetime?:string;originalTimezone?:string;utcInstant?:string;evidenceId?:string;verificationStatus:VerificationStatus;verifiedAt?:string;lastCheckedAt?:string;revision:number;revisions:DeadlineRevision[];calendarItemId?:string;note?:string}
+export interface RequirementDefinition{id:string;label:string;category:string;sourceUrl?:string;sourceVersion:string;official:boolean}
+export interface RequirementSnapshot{id:string;opportunityId:string;version:string;effectiveAt:string;evidenceId?:string;definitions:RequirementDefinition[]}
+export interface SubmissionOpportunity{id:string;venueId:string;editionId?:string;trackId:string;status:'open'|'upcoming'|'expired'|'unknown'|'rolling';sourceKind:'official'|'community'|'manual';evidenceIds:string[];deadlineIds:string[];requirementSnapshotId:string;fit:'high'|'medium'|'low'|'unassessed';fitNote?:string}
+export interface ResearchOutput{id:string;primaryProjectId:string;title:string;kind:'manuscript'|'abstract'|'artifact';draftResourceId?:string;version?:string}
+export interface RequirementCheck{id:string;targetId:string;requirementId:string;snapshotId:string;state:RequirementState;reviewedAt?:string}
+export interface SubmissionTarget{id:string;projectId:string;outputId:string;opportunityId:string;readiness:TargetReadiness;note?:string;requirementChecks:RequirementCheck[];linkedResourceIds:string[];nextTaskId?:string}
+export interface SubmissionArtifactLink{id:string;submissionId:string;resourceId:string;role:string;versionSnapshot?:string;hashSnapshot?:string;linkedAt:string}
+export interface SubmissionStatusEvent{id:string;submissionId:string;status:SubmissionStatus;timestamp:string;source:'user-reported'|'externally-verified';actor:string;note?:string}
+export interface Submission{id:string;targetId:string;status:SubmissionStatus;portalUrl?:string;externalId?:string;receiptResourceId?:string;submittedAt?:string;provenance:'user-reported'|'externally-verified';artifacts:SubmissionArtifactLink[];events:SubmissionStatusEvent[]}
+export interface SubmissionSnapshot{demoData:boolean;persisted:boolean;offline:boolean;venues:Venue[];editions:VenueEdition[];tracks:VenueTrack[];opportunities:SubmissionOpportunity[];deadlines:DeadlineEvent[];evidence:SourceEvidence[];requirementSnapshots:RequirementSnapshot[];outputs:ResearchOutput[];targets:SubmissionTarget[];submissions:Submission[]}

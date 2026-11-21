@@ -1,5 +1,6 @@
 import type { ResearchProject } from '../types'
 import { GlobalTaskService } from '../../../services/globalTaskService'
+import { SubmissionService } from '../submissions/services/submissionService'
 
 // Isolated adapter: replace this implementation with API calls without changing UI contracts.
 const demoProject: ResearchProject = {
@@ -64,6 +65,13 @@ export const ResearchProjectService = {
   async getProject(projectId: string): Promise<ResearchProject> {
     await new Promise((resolve) => setTimeout(resolve, 160))
     if (projectId === 'empty-project') return emptyProject
-    return {...demoProject,tasks:await GlobalTaskService.list(projectId)}
+    const submissionData=await SubmissionService.getSnapshot(projectId)
+    const linkedOpportunityIds=new Set(submissionData.targets.map(target=>target.opportunityId))
+    const nextDeadline=submissionData.deadlines.filter(deadline=>linkedOpportunityIds.has(deadline.opportunityId)&&deadline.utcInstant).sort((a,b)=>a.utcInstant!.localeCompare(b.utcInstant!))[0]
+    const opportunity=nextDeadline&&submissionData.opportunities.find(item=>item.id===nextDeadline.opportunityId)
+    const venue=opportunity&&submissionData.venues.find(item=>item.id===opportunity.venueId)
+    const evidence=nextDeadline?.evidenceId?submissionData.evidence.find(item=>item.id===nextDeadline.evidenceId):undefined
+    const milestones=nextDeadline?[...demoProject.milestones.filter(item=>item.kind!=='submission'),{id:nextDeadline.id,title:`${venue?.canonicalName} · ${nextDeadline.eventType} (Demo)`,kind:'submission' as const,date:nextDeadline.originalLocalDatetime?.slice(0,10),timezone:nextDeadline.originalTimezone,verification:'unverified' as const,sourceUrl:evidence?.url}]:demoProject.milestones
+    return {...demoProject,milestones,tasks:await GlobalTaskService.list(projectId)}
   },
 }
