@@ -32,3 +32,10 @@ This is a dependency-state correction only; it does **not** activate the earlier
 - Module 007 real-host QA authority and evidence collection: [host instruction](https://github.com/zyyu1/personal-workspace/blob/main/docs/handoffs/007/MODULE_007_WINDOWS_PICKER_HOST_QA_INSTRUCTION.md), [Issue #16](https://github.com/zyyu1/personal-workspace/issues/16#issuecomment-7066306276).
 - **Module 008 implementation: NOT STARTED / WAITING FOR M007 HOST QA FINAL DESIGN WINDOW DISPOSITION.** Independent host evidence must be reviewed; any remaining PARTIAL must be explicitly resolved or separately accepted by the user/Design Window, never silently upgraded to PASS.
 - After that, Design Window must verify actual merged Module 007 interfaces against Module 008's frozen design and separately authorize any 008 execution. This section **does not authorize development today**.
+
+## Host QA Revision 02 Hold — Module 007 Before 008 (2026-11-21)
+
+- [Module 007 Issue #16](https://github.com/zyyu1/personal-workspace/issues/16#issuecomment-7067039504): first real Windows host test was **FAIL** on the `%TEMP%` fixture due to Chrome standard system-files safety restriction, not a proven Module 007 code defect. Independent QA classified the entire host gate as **PARTIAL**.
+- One narrowly scoped [Module 007 Windows Host Retest Revision 02](https://github.com/zyyu1/personal-workspace/blob/main/docs/handoffs/007/MODULE_007_WINDOWS_PICKER_HOST_QA_RETEST_REV02.md) has been authorized for a disposable child under a safe local Documents directory, with original browser security and no fallback path or repeated retries.
+- **Module 008 remains NOT STARTED / NO IMPLEMENTATION AUTHORIZATION** while this final Module 007 host gate is unresolved. The user requested 007 closeout first. Even if Revision 02 succeeds, new independent host QA, Design Window final disposition, accepted merged 007 interface mapping and a **separate 008 start instruction** are still mandatory.
+- No B2B/B3 or real Codex Queue activation.
