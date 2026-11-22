@@ -26,3 +26,12 @@
 - **CI scope:** one read-only checkout workflow for the Module 009 PR, Typecheck/Lint/Build/Tests/Diff; restrict trigger/job to `codex/module-009`, read-only token, no secrets, no deployment, no repository-settings/branch-protection edits.
 - **Factual implementation status at approval:** GitHub main showed no CI workflow file and Issue #19 contained no detailed CI request comment; this is a controlled *permission to implement CI*, **not** evidence that a workflow is installed, that a GitHub scope was granted, or that CI has passed.
 - **Unchanged gates:** Module 009 code is separately authorized but actual implementation/CI proof pending. Independent Review Only QA and a later separate Design Window merger approval remain mandatory. No Module 010, B2B/B3, scheduler, Codex Queue or unattended automation.
+
+## Implementation — PR open / independent QA pending (2026-11-22; CURRENT, branch `codex/module-009`)
+
+- **State:** **IMPLEMENTED / PR OPEN / INDEPENDENT QA PENDING / MERGE HOLD.** Earlier lines in this file are the main-branch authorization history and remain unchanged.
+- **Executor:** Claude Code cloud Development / Execution Window (no access to the user's Windows host). Branch `codex/module-009` created from latest clean `main` `b6140bd`; source contracts matched the audit baseline `1a77022` (docs-only changes since).
+- **PR:** https://github.com/zyyu1/personal-workspace/pull/20 — exact final HEAD published in the PR Review Only request comment.
+- **Handoff:** [`QA_HANDOFF.md`](./QA_HANDOFF.md) with changed files, migration/backup proof, CI command results, cloud-browser evidence, dependency decision (none added) and the 30-row developer self-check (developer evidence only; 29 PASS / 1 PARTIAL — row 29 browser scope).
+- **CI:** scoped workflow `.github/workflows/module-009-ci.yml` under `MODULE_009_CI_PERMISSION_APPROVAL.md`; Node 24; typecheck, lint (12 pre-existing warnings, 0 new), build, 186/186 tests, diff check and cloud Chrome smoke pass.
+- **Not done / not authorized:** no merge, no Issue #19 closure, no QA PASS claim, no Module 010, B2B/B3, Codex Queue, scheduler or service.
