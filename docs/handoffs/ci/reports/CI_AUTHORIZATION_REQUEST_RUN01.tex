@@ -1,0 +1,89 @@
+% CI Authorization Request -- Run 01
+% Producer: Claude Code Cloud Execution Window
+% Consumer: Main (Design) Window
+% Branch: ci-github-actions (NOT main)
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+
+\newcommand{\sha}[1]{\texttt{\small #1}}
+\newcommand{\NO}{\textcolor{red!70!black}{\textbf{no}}}
+\newcommand{\YES}{\textcolor{green!50!black}{\textbf{yes}}}
+
+\title{Personal Workspace --- GitHub Actions CI\\Authorization Request (Run 01)}
+\author{Claude Code Cloud Execution Window}
+\date{2026-11-22 (Europe/Berlin)}
+
+\begin{document}
+\maketitle
+
+\section*{Summary}
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+Request & Authorize adding one GitHub Actions workflow \texttt{.github/workflows/ci.yml} to \texttt{main} \\
+Requested by & User (2026-11-22 17:42), routed to Design Window as required \\
+Current state & \textbf{NOT IMPLEMENTED}. Proposal only; no workflow is active \\
+Main at request & \sha{1101415bcedd264da1440601b29c124157c7aa2a} \\
+Proposal file & \texttt{docs/handoffs/ci/PROPOSED\_ci.yml} on branch \texttt{ci-github-actions} \\
+Awaiting & Design Window decision (Section~\ref{sec:decision}) \\
+\bottomrule
+\end{tabularx}
+
+\section{Problem}
+The cloud Independent QA Window (\texttt{qa-window}) completed a read-only capability self-check. In this cloud session the npm registry is unreachable and \texttt{node\_modules} is absent, so QA cannot run the project's verification commands itself:
+
+\begin{tabularx}{\textwidth}{@{}Xll@{}}
+\toprule
+Capability & Cloud QA & Evidence \\
+\midrule
+Exact-SHA check, GitHub API reads (PR, issue, checks) & \YES & API HTTP 200, \texttt{git ls-remote} \\
+Static diff review, \texttt{git diff --check} & \YES & exit 0 \\
+\texttt{npm run typecheck / lint / build}, \texttt{npm test} & \NO & \texttt{ENOTFOUND registry.npmjs.org} \\
+Browser UI QA against running app & \NO & app cannot be built \\
+\bottomrule
+\end{tabularx}
+
+\medskip
+Without CI, every command-based acceptance row would be reported as \textbf{NOT TESTABLE} by the cloud QA Window. With CI, QA can read the \texttt{check-runs} result for the exact reviewed SHA via \texttt{GET /repos/zyyu1/personal-workspace/commits/\{sha\}/check-runs} and cite it as evidence.
+
+\section{Proposed change (exact scope)}
+\begin{itemize}[nosep]
+  \item \textbf{One new file only:} \texttt{.github/workflows/ci.yml}, content identical to \texttt{docs/handoffs/ci/PROPOSED\_ci.yml}.
+  \item No change to \texttt{src/}, tests, \texttt{package.json}, \texttt{package-lock.json}, configs, or any module.
+  \item Triggers: \texttt{pull\_request} into \texttt{main}, \texttt{push} to \texttt{main}, manual \texttt{workflow\_dispatch}.
+  \item Permissions: \texttt{contents: read} only. No secrets, no deploy, no write tokens, no scheduled (\texttt{cron}) trigger.
+  \item Steps on \texttt{ubuntu-latest}, Node 22, npm cache: \texttt{npm ci} $\to$ \texttt{typecheck} $\to$ \texttt{lint} $\to$ \texttt{build} $\to$ \texttt{test}; on PRs additionally \texttt{git diff --check origin/main...HEAD}.
+  \item These mirror the commands the independent QA reports already used (e.g.\ Module 008: typecheck, lint, build, 160/160 tests, \texttt{git diff --check}).
+\end{itemize}
+
+\section{Limits and risks}
+\begin{enumerate}[nosep]
+  \item \textbf{CI is evidence, not acceptance.} It does not replace independent QA, browser QA, Windows host QA, or Design Window decisions. A green check must not be read as merge authorization.
+  \item \textbf{Not a merge gate unless separately decided.} Making the check \emph{required} needs branch protection, which this private repository's plan does not expose (API 403). Proposal does not attempt it.
+  \item \textbf{Environment difference.} CI runs on Linux; Windows-specific behaviour (e.g.\ native folder picker) remains out of scope.
+  \item \textbf{Cost.} Private-repo Actions minutes count against the account's free quota; one run is expected to take a few minutes.
+  \item \textbf{Action versions.} \texttt{actions/checkout@v4} and \texttt{actions/setup-node@v4} should be confirmed as current major versions before activation.
+  \item \textbf{Lint warnings.} The 12 pre-existing Research warnings do not fail \texttt{eslint src} (exit 0); no lint rule change is proposed.
+  \item \textbf{Push path.} The session proxy blocked the GitHub Contents API (HTTP 403) earlier; adding a workflow file via \texttt{git push} may additionally require a token with \texttt{workflow} scope. If the push is refused, execution will STOP and report.
+\end{enumerate}
+
+\section{Interaction with active work}
+Main shows Module 009 code-only start activated (\sha{96ed860}, \sha{1101415}). If CI lands on \texttt{main} before a Module 009 PR is opened or updated, that PR will receive CI results automatically. This request does not touch Module 009 scope, and this window has taken no Module 009 action.
+
+\section{Decision requested}\label{sec:decision}
+\begin{enumerate}
+  \item \textbf{AUTHORIZE AS PROPOSED:} execution window adds \texttt{.github/workflows/ci.yml} (exact proposal content) to \texttt{main} via its own PR, author \texttt{yu ziyi}; independent QA verifies the file diff and the first CI run's result on the exact SHA; Design Window approves merge.
+  \item \textbf{AUTHORIZE WITH CHANGES:} specify changes (triggers, Node version, steps, PR vs.\ direct commit).
+  \item \textbf{REJECT / DEFER:} cloud QA continues to mark command-based rows as NOT TESTABLE; builds/tests stay with the Windows side.
+\end{enumerate}
+
+\section{Scope confirmation}
+No workflow was added to \texttt{.github/workflows/}. No change to \texttt{main}, source, tests or dependencies. No Module 009/010, B2B/B3, Codex Queue, scheduler or service work started.
+
+\end{document}
