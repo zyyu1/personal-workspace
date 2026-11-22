@@ -1,0 +1,154 @@
+% Module 009 -- Independent Review Only QA report at a042be2 (evidence only; no candidate-branch change)
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.0cm]{geometry}
+\usepackage{booktabs,tabularx,longtable,hyperref,xcolor,enumitem,array}
+\newcommand{\sha}[1]{\texttt{\small #1}}
+\newcommand{\PASS}{\textcolor{green!50!black}{\textbf{PASS}}}
+\newcommand{\PART}{\textcolor{orange!80!black}{\textbf{PARTIAL}}}
+\newcommand{\FAIL}{\textcolor{red!70!black}{\textbf{FAIL}}}
+\newcommand{\NV}{\textcolor{gray!60!black}{\textbf{NOT VERIFIED}}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\title{Module 009 --- Independent Review Only QA Report\\at \texttt{a042be2}: \textbf{INSUFFICIENT EVIDENCE}}
+\author{Independent Review Only QA Window (Claude Code cloud; separate from the development executor)}
+\date{2026-11-22 (Europe/Berlin)}
+\begin{document}
+\maketitle
+
+\section*{Summary}
+\begin{tabularx}{\textwidth}{@{}lY@{}}
+\toprule
+Authority & \texttt{MODULE\_009\_INDEPENDENT\_QA\_REVIEW\_ONLY\_AUTHORIZATION.md} (main \sha{8ba399b}) \\
+Review anchor & \sha{a042be2304bee7ef56678d719ea3a09999a95cce}; PR \#20 live head checked at start and end of review: identical \\
+PR / Issue & \href{https://github.com/zyyu1/personal-workspace/pull/20}{PR \#20} OPEN / DRAFT / unmerged, \texttt{mergeable\_state=clean}; Issue \#19 OPEN \\
+Verdict & \textbf{INSUFFICIENT EVIDENCE} --- not ACCEPTED \\
+30-row result & \textbf{26 \PASS{} / 4 \PART{} / 0 \FAIL{} / 0 whole-row \NV}; Windows-host, native file-permission and real-browser permission-required sub-items of row 29 are \NV \\
+Design ruling needed & F-01: legacy verified exam loses its Calendar event when an \emph{unverified} exam milestone is added (conflict with DESIGN \S5.1) \\
+Disclosure gap & F-02: two failed CI runs omitted from the developer's ``complete CI history'' \\
+\bottomrule
+\end{tabularx}
+
+\section{Read-only statement and environment}
+\begin{itemize}[nosep]
+  \item No code change, no commit or push to \texttt{codex/module-009}, no fix, no PR state change, no merge, no Issue closure. This report is the only write, on the evidence-only branch \texttt{module-009-run-reports}.
+  \item Separate cloud read-only checkout at detached \sha{a042be2}; worktree clean.
+  \item \textbf{Limits (truthful):} the cloud workspace cannot reach the npm registry, so \texttt{npm ci}/typecheck/lint/build/test were \textbf{not reproduced locally}; their evidence is the exact-head GitHub Actions job log, downloaded and decoded by QA. \textbf{No access to the user's Windows host}, browser, native file picker or local data: all Windows items are \NV.
+  \item QA's own executions: \texttt{git diff --check}, GitHub REST/CI log verification, and 37 independent timezone/DST probes of \texttt{examDates.ts} with Node 22.23.5.
+  \item Evidence tags: [QA-RUN] executed by QA; [CI-LOG] exact-head CI log verified by QA; [SRC] QA source review; [TEST-SRC] test source read by QA (pass result from CI, not local).
+\end{itemize}
+
+\section{Preflight}
+\begin{tabularx}{\textwidth}{@{}lY@{}}
+\toprule
+Check & Result \\
+\midrule
+PR \#20 head (REST, start and end) & \sha{a042be2304bee7ef56678d719ea3a09999a95cce} = anchor \\
+Authorization doc & absent at \sha{a042be2}; found and read in full on \texttt{origin/main} \sha{8ba399b} \\
+\texttt{DESIGN\_APPROVED.md} & read in full incl.\ all 30 \S10 rows \\
+\texttt{QA\_HANDOFF.md} + PR comments & handoff (written at \sha{845c825}) and all 5 PR \#20 comments read \\
+\sha{b9fd763}$\to$\sha{a042be2} & only \texttt{tools/ci/module-009-browser-smoke.mjs} [QA-RUN] \\
+\sha{ed1c409}$\to$\sha{a042be2} & docs + smoke script only; no application code [QA-RUN] \\
+\texttt{package.json}, lockfile, \texttt{InspectorShell.tsx} vs main & 0 changed lines [QA-RUN] \\
+\texttt{git diff --check origin/main...HEAD} & exit 0 [QA-RUN] \\
+\bottomrule
+\end{tabularx}
+
+\section{CI history (independently verified via REST and decoded job logs)}
+\begin{tabularx}{\textwidth}{@{}llllY@{}}
+\toprule
+Run & Head & Result & Listed by dev? & Evidence \\
+\midrule
+45045784496 & \sha{d131025} & failure & \textbf{no} & Node 22: 3 pre-existing ZIP tests fail \\
+45045970624 & \sha{7a20b48} & failure & in handoff & node22 job 3/160 ZIP fail; node24 job success \\
+45046822507 & \sha{f53fa04} & success & no & no smoke step yet \\
+45047090026 & \sha{ecae008} & success & no & no smoke step yet \\
+\textbf{45047256878} & \sha{bcdb26d} & \textbf{failure} & \textbf{no} & browser smoke 4/17 fail: route wait (case-sensitive \texttt{'Exams \& past papers'}) at all 3 viewports + \texttt{no console errors} (favicon 404) \\
+45047487262 & \sha{ed1c409} & success & yes & single-read Escape focus passed \\
+45049036051 a1 & \sha{b9fd763} & failure & yes & 1440$\times$900 \texttt{focusLabel=null} \\
+45049036051 a2 & \sha{b9fd763} & failure & yes & 1024$\times$768 \texttt{focusLabel=null} \\
+\textbf{45050344151} & \textbf{\sha{a042be2}} & \textbf{success} & yes & see below \\
+\bottomrule
+\end{tabularx}
+
+\paragraph{Exact-head run 45050344151 (job 137293842940) [CI-LOG].} Checked-out SHA and ``Tested HEAD'' = \sha{a042be2}; Node v24.22.3; tsc pass; lint \texttt{12 problems (0 errors, 12 warnings)}; vite v8.3.8 build pass; vitest \textbf{12 files / 186 passed}; diff-check pass; smoke 0 failures. Focus: initial focus \texttt{body} in 15/15; final focus the \emph{same connected} \texttt{New assessment title} input; latencies 1440: 26/8/8/11/8\,ms, 1024: 26/25/10/8/27\,ms, 390: 28/5/6/5/26\,ms; 0 timeouts, 0 $>$250\,ms. Calendar: exactly one event per test exam, \texttt{Original: 2026-12-15 09:00 · Europe/Berlin · user-confirmed · exact}.
+
+\section{30-row frozen acceptance matrix (independent)}
+{\small
+\begin{longtable}{@{}p{0.5cm}p{4.3cm}p{1.6cm}p{9.3cm}@{}}
+\toprule
+\# & Frozen row (abridged) & Result & Evidence \\
+\midrule
+\endhead
+1 & Exams route opens correct offering; no cross-term leak & \PASS & [SRC] snapshot filters by \texttt{offeringId}; other terms only as read-only \texttt{courseHistory}; \texttt{require*} ownership checks; unknown offering $\to$ error. [TEST-SRC] foreign-offering + sittings-per-offering tests; [CI-LOG] \texttt{tabActive:"Exams"} \\
+2 & 007 Assessment IDs/data survive; Exams only after implementation & \PASS & [SRC] updates spread \texttt{current}, 007 fields untouched; only \texttt{exams} tab enabled. [TEST-SRC] v1$\to$v3 deep-equal legacy assessment; legacy fields unchanged after milestone \\
+3 & Stable ID, validated type/offering & \PASS & [SRC] \texttt{stableId}, \texttt{oneOf(ASSESSMENT\_TYPES)}, \texttt{requireOffering}; archive/cancel never delete \\
+4 & Past Paper is not an Assessment; no invented date & \PASS & [SRC] \texttt{createPastPaper} writes papers + link only; [TEST-SRC] v1 \texttt{past-papers} classification not projected \\
+5 & Unknown/unverified shown Unknown/Tentative & \PASS & [SRC] \texttt{isCalendarEligible} excludes unknown/unverified; unknown cannot be confirmed; UI ``Tentative · unverified'', Overview ``Tentative · not on Calendar''; [CI-LOG] \texttt{unknownShown:true} \\
+6 & Date-only: no fabricated time & \PASS & [QA-RUN] time on date-only rejected, no zone assumed; [SRC] \texttt{start/end} undefined, ``Date shown without invented time'' \\
+7 & Exact: local time, IANA zone, DST & \PASS & [QA-RUN] Berlin gap 02:00/02:30 rejected, 01:59/03:00 correct; fold requires choice (earlier 00:30Z, later 01:30Z); NY gap/fold; Lord\_Howe 30-min gap (0) / fold (2); Kathmandu +5:45; Tokyo month boundary round-trip; viewer TZ LA/Tokyo invariant; missing zone rejected. Minor: F-06 \\
+8 & Correction keeps history; superseded not upcoming & \PASS & [SRC] same-kind milestone \texttt{superseded} with links, never overwritten; projections use \texttt{active} only \\
+9 & Cancelled exam: history kept, excluded & \PASS & [SRC] lifecycle \texttt{cancelled}, milestones/sittings kept; excluded from calendar (incl.\ legacy) and summary \\
+10 & Registration/withdrawal/exam milestones separate & \PASS & [SRC] supersede only within same kind; distinct \texttt{exam-milestone} events; [TEST-SRC] four kinds coexist \\
+11 & Registration only by explicit action; no third-party claim & \PASS & [SRC] only \texttt{setRegistration}, append-only history; copy ``no university system is contacted or updated'' \\
+12 & Unknown registration not silently converted & \PASS & [SRC] default \texttt{unknown}, nothing else writes it. Note F-09 \\
+13 & Sitting explicit, absence/withdrawal, never by time & \PASS & [SRC] only \texttt{recordSitting}; [TEST-SRC] past-dated exam $\to$ no sitting \\
+14 & Official vs self-reported; no PASS/FAIL inference & \PASS & [SRC] three grade sources, official needs evidence; outcome only user-chosen; [TEST-SRC] grade 4.0 stays \texttt{pending} \\
+15 & Multiple sittings across offerings distinct & \PASS & [SRC] read-only \texttt{courseHistory} with term; cross-term update $\to$ not found \\
+16 & One canonical Resource; optional solution; no byte copy & \PASS & [SRC] IDs + \texttt{course-past-paper} ResourceLink only; existence checked; truthful partial-commit + retry \\
+17 & Reuse across offerings, no copied progress/Task/TimeEntry & \PASS & [SRC] deterministic idempotent link; practice requires link; course check; [TEST-SRC] concurrent reuse test \\
+18 & Missing/other-device keeps history; Open capability-gated & \PART & [SRC]/[TEST-SRC] paper/practice independent of availability; \texttt{openOriginal} only \texttt{available-provider}. \textbf{Gaps:} no real-browser another-device/permission-required/missing test; no Windows file test; F-05 \\
+19 & Practice explicit; missing max $\to$ Unknown & \PASS & [SRC] percentage only with points and positive denominator, else ``max unknown''; invalid scores rejected \\
+20 & Practice and official result never mix & \PASS & [SRC] practice writes only \texttt{pastPaperPractices}; results only in \texttt{examSittings} \\
+21 & Per-question via 008; no duplicate Items & \PASS & [SRC] one deterministic set per paper+offering, same mutation, idempotent; no items/attempts created \\
+22 & Open/solution view never marks solved/mastered & \PASS & [SRC] open is read-only; [TEST-SRC] \texttt{queryProgress} unchanged \\
+23 & Idempotent single Task; failure/retry reconciliation & \PASS & [SRC] deterministic task + link IDs via existing \texttt{GlobalTaskService.ensure}; [TEST-SRC] concurrent + injected failure/retry. Registration task is per assessment (disclosed) \\
+24 & Task due, planned session, milestones, exam date separate & \PASS & [SRC] no dueDate, no write-back; [TEST-SRC] dueDate + planDay leave milestones unchanged \\
+25 & One stable exam event; distinct milestones; no duplicate 007 & \PART & No duplication: milestone reuses \texttt{calendar-assessment:<id>} + dedupe [SRC/TEST-SRC/CI-LOG]. \textbf{F-01:} legacy verified event disappears without replacement after an unverified exam milestone; untested; no save-time warning. \textbf{Design ruling required} \\
+26 & Self-reported duration never changes Timer/TimeEntry & \PASS & [SRC] field only; timer only via button; [TEST-SRC] TimeEntry list empty \\
+27 & Resume stable IDs; safe fallback & \PASS & [SRC] \texttt{entityExists} checks offering, archive, link; fallback Overview; [CI-LOG] missing deep link notice \\
+28 & v1/v2$\to$v3 migration, backup, failure safety & \PASS & [SRC] v1 reuses 007/008 normalization, v2 validated copy, empty arrays; [TEST-SRC] backup 1$\to$3, v2 deep-equal, injected backup/commit failure keeps v2, retry ok, schema 4/incomplete rejected; [CI-LOG] pass at exact head. Not reproduced locally \\
+29 & 1440/1024/390 no overflow; Escape/create focus; keyboard/ARIA; states & \PART & \textbf{Cloud Chrome PASS} [CI-LOG]: no overflow (list/inspector/papers/overview), 390 full-screen inspector, 15/15 focus restored to same connected input in 5--28\,ms, deep-link reload persisted. Script audit [QA-RUN]: identity check \texttt{activeElement===expected \&\& isConnected}, never calls \texttt{focus()}, Escape via trusted CDP key event. \textbf{Gaps:} Windows host \NV; real-browser permission-required/another-device/Open-denied \NV; Tab trap and card$\to$Escape only in jsdom; values set by JS not typed; transient \texttt{body} focus (F-03); no screen-reader test \\
+30 & 001--008 regressions + five commands + independent QA with SHA & \PART & [CI-LOG] all success at exact \sha{a042be2}: 186/186 incl.\ 160 baseline; lint 0 errors / 12 pre-existing warnings; 008 suite only \texttt{targetSchemaVersion} 2$\to$3 [QA-RUN]. \textbf{Gaps:} five commands not reproduced locally; Node 22 ZIP baseline issue unresolved (CI pinned to Node 24); F-02 \\
+\bottomrule
+\end{longtable}
+}
+\noindent\textbf{Tally:} \PASS{} 26 · \PART{} 4 (rows 18, 25, 29, 30) · \FAIL{} 0 · whole-row \NV{} 0.
+
+\section{Findings}
+\begin{description}[style=nextline,leftmargin=0.9cm,nosep]
+  \item[F-01 --- Medium, Design ruling required] For a legacy 007 assessment with \texttt{verified=true}, adding an \emph{active unverified} \texttt{exam} milestone removes its Calendar event with no replacement (unverified is not eligible). \texttt{MilestoneForm} gives no warning; only Overview later shows ``Tentative · not on Calendar''. Conflicts with DESIGN \S5.1 (``do not lose its existing Calendar visibility''). Tests cover only source-verified replacement. Cause: \texttt{globalCalendarService.ts} adds the assessment to \texttt{examAssessmentIds} \emph{before} \texttt{isCalendarEligible}. Repro: verified legacy assessment $\to$ \texttt{setMilestone(\{kind:'exam', datePrecision:'date-only', localDate, verificationStatus:'unverified'\})} $\to$ calendar query lacks \texttt{calendar-assessment:<id>}. Cancelling that milestone restores the legacy event [SRC]. Options for Design: (a) unverified milestone does not hide the legacy event until confirmed; (b) keep behaviour but warn at save and label in Exams; (c) accept as explicit user correction.
+  \item[F-02 --- Medium, disclosure] The developer table titled ``Complete CI history (nothing omitted)'' omits run 45047256878 (\sha{bcdb26d}, smoke 4 failures) and 45045784496 (\sha{d131025}, Node 22 failure). The following commit \sha{ed1c409} made the route check case-insensitive and moved \texttt{/favicon.ico} 404 to ``reported, not failed''. QA verified the filter is narrow (\texttt{source==='network' \&\& pathname==='/favicon.ico'}) and the change is reasonable, but it is an assertion relaxation after a failure and should be disclosed. The Design Window authorization also does not record these runs.
+  \item[F-03 --- Low, accessibility, pre-existing] Focus sits on \texttt{body} for 5--28\,ms after Escape (15/15), because the shared, unchanged \texttt{InspectorShell} restores focus in a passive \texttt{useEffect} cleanup after the aside is removed. Consistent with the old single-read smoke failures being a timing race. Not a 009 regression; final focus always correct; screen-reader impact \NV. Possible future change (Design decision): restore before close or use a layout-effect cleanup.
+  \item[F-04 --- Low] Overview \texttt{summary()} filters ``upcoming'' only by milestone date; a legacy verified exam without milestone stays ``upcoming'' even when its date has passed.
+  \item[F-05 --- Low, UX] Paper Inspector shows \texttt{available-here/managed} as ``Available'' while ``Open original'' is disabled with no explanation (consistent with the global \texttt{openOriginal} contract, but confusing).
+  \item[F-06 --- Low, cosmetic] Lowercase zone \texttt{europe/berlin} accepted and stored non-canonically (conversion correct); legal legacy names \texttt{GMT}, \texttt{EST5EDT} rejected; Pacific/Apia skipped day reported as ``daylight-saving gap''; year 1899 reported as ``Not a real calendar day''.
+  \item[F-07 --- Low, reporting] Smoke \texttt{"checks":30} is \texttt{evidence.length} (log rows), not assertions; ``30/30 checks'' is a mislabel (\texttt{failures:0} is real) and is not 30 product acceptances.
+  \item[F-08 --- Low, coverage] Real-browser smoke does not exercise Tab trap, card$\to$Escape focus, past paper / practice creation, permission or missing Resource states, DST fold UI choice, registration or sitting forms (\texttt{Tab} key defined but unused).
+  \item[F-09 --- Info] 007 free-text \texttt{registrationStatus} is preserved but not displayed; no code in \texttt{src} writes it, so the risk is theoretical.
+\end{description}
+
+\section{Authorization \S3 priority checks}
+\begin{enumerate}[nosep]
+  \item \textbf{Focus/keyboard/viewport/permissions/Windows:} cloud-Chrome restoration correct and stable; old failures consistent with observation timing. Transient \texttt{body} focus judged not a material 009 regression (pre-existing shared component), but no screen-reader evidence. Windows and permission-required \NV.
+  \item \textbf{Date truthfulness/DST:} 37 independent cases, semantics correct; cosmetic issues only (F-06).
+  \item \textbf{Legacy/Calendar policy:} material ambiguity, \textbf{Design ruling required} (F-01). QA neither approves nor changes the behaviour.
+  \item \textbf{Migration/backups:} test design adequate; pass at exact head in CI; not reproduced locally.
+  \item \textbf{Cross-offering/canonical ownership:} no out-of-scope writes found; deterministic, idempotent IDs for Task, Set and Link.
+  \item \textbf{Regression/runtime:} exact-head CI green; Node 22 ZIP issue is pre-existing on main and unresolved; smoke diagnostics wait for the same connected target without calling \texttt{focus()}.
+\end{enumerate}
+
+\section{Verification still required before ACCEPTED (needs explicit user authorization)}
+\begin{enumerate}[nosep]
+  \item Windows host: separate read-only worktree at \sha{a042be2} (do not touch the existing working copy); run the five commands; record Node version and Node 22 ZIP behaviour.
+  \item Windows Chrome/Edge with \texttt{vite preview} at 1440$\times$900, 1024$\times$768, 390$\times$844: 5 real-keyboard cycles each (type + Enter, inspector opens, Tab / Shift+Tab trap, Escape, focus returns to the same input); same for card$\to$Escape$\to$card.
+  \item Past papers with \texttt{another-device}, \texttt{permission-required} and \texttt{missing} Resources: inspector text, disabled Open, practice retained; provider Resource Open success and popup-blocked message.
+  \item NVDA or Narrator: announcement on Escape close (F-03), inspector landmark name, tablist and form labels.
+  \item Reproduce F-01 in the UI; re-verify after the Design ruling.
+\end{enumerate}
+
+\section{Final verdict and scope}
+\textbf{INSUFFICIENT EVIDENCE.} Source and exact-head CI evidence show solid core domain logic (dates/DST, migration, ownership, idempotency, no Calendar duplication) and \textbf{no row is FAIL}. However row 29 Windows/permission/real-browser parts are unverified, F-01 conflicts with frozen DESIGN \S5.1 and needs a Design ruling, the five commands could not be reproduced in this QA environment, and CI history disclosure is incomplete (F-02). Per authorization \S4, ACCEPTED is not possible until these are resolved.
+
+No change to \texttt{codex/module-009}, no merge, Issue \#19 open, PR \#20 stays \textbf{DRAFT / MERGE HOLD}. No Module 010, B2B/B3, Codex Queue, scheduler or service. QA window now \textbf{STOPPED}, awaiting the Design Window ruling.
+\end{document}
