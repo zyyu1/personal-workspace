@@ -112,6 +112,9 @@ Close Issue \#17 & \NOTDONE \\
   \item \textbf{Option B:} user / Windows window applies the patch in Appendix~\ref{app:patch} manually, posts closeout, closes Issue \#17.
 \end{enumerate}
 
+\section{Addendum --- remote state observed at report push}
+After this cloud window stopped, \texttt{main} advanced from \sha{48558a8} to \sha{07dd45933afb76df4a128dca08cabcde5721099a} (2026-11-22T16:16:55Z, author \texttt{yu ziyi}, ``docs(008): reconcile verified final Module 008 merge status'', \texttt{STATUS.md} $+13/-0$, no deletions), and Issue \#17 is now \textbf{closed}. These actions were \emph{not} performed by this cloud window. The Section~\ref{sec:decision} options are therefore likely moot; the prepared patch in Appendix~\ref{app:patch} should \textbf{not} be applied on top of \sha{07dd459} (it would duplicate the final section). This window has not verified the content of \sha{07dd459} against the evidence above and takes no further action.
+
 \section{Scope confirmation}
 No Module 009/010, B2B (paused), B3, real Codex Queue, scheduler, watcher, service, daemon or unattended dispatch was started. No source, test or dependency edits. No force-push, reset or rebase on any shared branch.
 
