@@ -1,0 +1,67 @@
+% Module 009 -- Run 03 diagnostic CI rerun report (evidence only)
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.1cm]{geometry}
+\usepackage{booktabs,tabularx,hyperref,xcolor,enumitem}
+\newcommand{\sha}[1]{\texttt{\small #1}}
+\newcommand{\PASS}{\textcolor{green!50!black}{\textbf{PASS}}}
+\newcommand{\FAIL}{\textcolor{red!70!black}{\textbf{FAIL}}}
+\newcommand{\STOP}{\textcolor{red!70!black}{\textbf{STOP}}}
+\title{Module 009 --- Run 03 Diagnostic CI Rerun\\Second Attempt \FAIL{} --- \STOP}
+\author{Claude Code Cloud Development / Execution Window}
+\date{2026-11-22 (Europe/Berlin)}
+\begin{document}
+\maketitle
+\section*{Summary}
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+Authority & \texttt{MODULE\_009\_RUN03\_CI\_DIAGNOSTIC\_AUTHORIZATION.md} (main) \\
+Outcome & \STOP{} --- the single authorized rerun also failed; no QA request published \\
+Exact HEAD & \sha{b9fd7637ab66ef1e37afc43fb1968e0b8e26670c} (both attempts) \\
+PR \#20 & OPEN, DRAFT, unmerged; no PR/Issue comment \\
+Reruns used & 1 of 1 (job rerun via \texttt{POST /actions/jobs/137289855375/rerun}, HTTP 201) \\
+\bottomrule
+\end{tabularx}
+
+\section{Pre-rerun checks (all \PASS)}
+Issue \#19 OPEN; PR \#20 OPEN/DRAFT/UNMERGED, head \sha{b9fd763}; remote branch head \sha{b9fd763}; workflow blob at that head \sha{6171a24} identical to the previously green head \sha{ed1c409}; no other active run on the branch.
+
+\section{Both attempts of run 45049036051}
+\begin{tabularx}{\textwidth}{@{}lXX@{}}
+\toprule
+ & Attempt 1 (job 137289855375) & Attempt 2 (job 137291827988) \\
+\midrule
+Tested SHA & \sha{b9fd763} & \sha{b9fd763} \\
+npm ci / typecheck / build & \PASS & \PASS \\
+Lint & \PASS{} (0 err, 12 pre-existing warn) & \PASS{} (0 err, 12 pre-existing warn) \\
+Tests & \PASS{} 186/186 & \PASS{} 186/186 \\
+Diff check & \PASS & \PASS \\
+Browser smoke & \FAIL{} 16/17 & \FAIL{} 16/17 \\
+Escape focus 1440$\times$900 & \FAIL{} (\texttt{focusLabel=null}) & \PASS \\
+Escape focus 1024$\times$768 & \PASS & \FAIL{} (\texttt{focusLabel=null}) \\
+Escape focus 390$\times$844 & \PASS & \PASS \\
+Run conclusion & failure & failure \\
+\bottomrule
+\end{tabularx}
+\medskip
+Links: \url{https://github.com/zyyu1/personal-workspace/actions/runs/45049036051/job/137289855375} (attempt 1),
+\url{https://github.com/zyyu1/personal-workspace/actions/runs/45049036051/job/137291827988} (attempt 2).
+All other browser checks passed in both attempts: no overflow at 1440/1024/390, focus moves into the auto-opened inspector, deep-link reload persists, DST gap rejected in the UI, one calendar event per exam with original time/zone, 0 console errors (default \texttt{/favicon.ico} 404 listed separately).
+
+\section{Aggregate focus evidence on identical app + script code}
+Runs 45047487262 (\sha{ed1c409}) and 45049036051 attempts 1--2 (\sha{b9fd763}): 9 Escape-focus checks, \textbf{2 failures}, at different viewports (1440 then 1024). The failure is intermittent and not tied to one viewport.
+
+\section{Root cause: still undetermined}
+\begin{itemize}[nosep]
+  \item \textbf{Script race (plausible):} the smoke reads \texttt{document.activeElement} once, immediately after the inspector element disappears. \texttt{InspectorShell} restores focus in its unmount cleanup, which may land a tick later.
+  \item \textbf{App race (plausible):} focus may occasionally be lost for real (e.g.\ return target re-rendered or focus applied before the URL-driven re-render settles). Row 29 territory.
+\end{itemize}
+Neither has been established. Per authorization: no further rerun, no script or app edit.
+
+\section{Proposal for a scoped remediation decision (not performed)}
+A minimal \emph{diagnostic-first} step that distinguishes the two causes: change only the smoke script to poll \texttt{document.activeElement} for up to 1\,s after the inspector closes and log the time at which focus arrives (or never arrives), repeated $n$ times per viewport. Late arrival $\Rightarrow$ script race (keep the deterministic wait). No arrival $\Rightarrow$ app bug (then a narrow \texttt{InspectorShell}/Exams focus fix with a unit test). Either path needs a new Design Window authorization.
+
+\section{Scope confirmation}
+Exactly one job rerun. No code, test, workflow or script edit; no push to \texttt{codex/module-009}; no PR/Issue comment; PR \#20 DRAFT and unmerged; no QA claim. Developer self-check unchanged: 29 PASS / 1 PARTIAL. No Module 010, B2B/B3, Codex Queue, scheduler or service.
+\end{document}
