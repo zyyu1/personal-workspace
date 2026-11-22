@@ -27,7 +27,22 @@
 - **Factual implementation status at approval:** GitHub main showed no CI workflow file and Issue #19 contained no detailed CI request comment; this is a controlled *permission to implement CI*, **not** evidence that a workflow is installed, that a GitHub scope was granted, or that CI has passed.
 - **Unchanged gates:** Module 009 code is separately authorized but actual implementation/CI proof pending. Independent Review Only QA and a later separate Design Window merger approval remain mandatory. No Module 010, B2B/B3, scheduler, Codex Queue or unattended automation.
 
-## Implementation — PR open / independent QA pending (2026-11-22; CURRENT, branch `codex/module-009`)
+## Module 009 Cloud Preflight Run 01 — Design Window Disposition (2026-11-22)
+
+- **Source evidence:** [`MODULE_009_PREFLIGHT_RUN01.tex`](https://github.com/zyyu1/personal-workspace/blob/2746f9493996225929fc33763f090bc3e825c73f/docs/handoffs/009/reports/MODULE_009_PREFLIGHT_RUN01.tex) on the separate `module-009-run-reports` branch, report commit `2746f9493996225929fc33763f090bc3e825c73f` (**not main; evidence only**).
+- **Run 01 result:** Repository/interface preflight reported PASS, but the Cloud Claude session lacked `node_modules`, npm registry resolution failed `ENOTFOUND` and offline cache install failed `ENOTCACHED`. Typecheck/Lint/Build/Test and real-browser checks were **BLOCKED / NOT RUN**, not source-code FAIL.
+- **Formal decision:** [Design Window Run 01 disposition](./MODULE_009_PREFLIGHT_RUN01_DISPOSITION.md), commit `f01d87381923de695c20b33612e81aaf85d505f5`: **ACCEPT STOP / OPTION 1 APPROVED — SWITCH TO USER-INITIATED LOCAL WINDOWS CLAUDE CODE RUN 02; NEW ENVIRONMENT PREFLIGHT REQUIRED**. The failed cloud session remains STOPPED; no new cloud network/Windows access is implicitly granted.
+- **Current main advanced since Run01:** `1101415` → `b6140bd` via two **documentation-only** CI approval commits; Run02 must freshly verify latest `main` and fully read frozen `DESIGN_APPROVED.md` including all 30 rows (Run01 only read its outline).
+- **CI:** Earlier Run01 report's 'CI request pending' statement is superseded: **scoped CI approved** by user and Design Window under `MODULE_009_CI_PERMISSION_APPROVAL.md`; no actual workflow or CI PASS is implied.
+- **Unchanged product gate:** Module 009 **DESIGN APPROVED / CODE START AUTHORIZED CONDITIONAL ON RUN02 PRECHECK / IMPLEMENTATION NOT STARTED / INDEPENDENT QA NOT STARTED / MERGE HOLD**. Issue #19 stays OPEN. No Module 010/B2B/B3/real Codex Queue/background operation.
+
+### Follow-up: Draft CI-only PR #20 exists after Run01 STOP
+
+- Subsequent live GitHub inspection found [PR #20](https://github.com/zyyu1/personal-workspace/pull/20) **OPEN / DRAFT / NOT MERGED**, `codex/module-009` observed HEAD `d131025bf8c7b67f6fcae8ac798c6a662244a974`, with **one CI workflow file only** (`.github/workflows/module-009-ci.yml`, +77 lines). This state arose **after** Run01's historical report that the branch/PR were absent; it does not indicate executable 009 application code or a passed CI/QA.
+- **Operator handoff update:** [Run01 disposition with post-decision addendum](./MODULE_009_PREFLIGHT_RUN01_DISPOSITION.md) now requires local Windows Run02 to **inspect/reuse existing PR #20 and branch**, verify current HEAD and CI-only diff, and safely reconcile latest main without force/reset/rebase. No second branch or PR should be created for the same approved work.
+- **Remaining status:** Run01 cloud environment blocked; local Windows development environment not yet validated; implementation/QA **NOT VERIFIED**; **MERGE HOLD**. Issue #19 remains the work order; any later branch changes must be reviewed at execution time.
+
+## Implementation — PR open / independent QA pending (2026-11-22 18:08 CET; branch `codex/module-009` snapshot `845c825`, written before the Run02 conflict decision — no longer the current section)
 
 - **State:** **IMPLEMENTED / PR OPEN / INDEPENDENT QA PENDING / MERGE HOLD.** Earlier lines in this file are the main-branch authorization history and remain unchanged.
 - **Executor:** Claude Code cloud Development / Execution Window (no access to the user's Windows host). Branch `codex/module-009` created from latest clean `main` `b6140bd`; source contracts matched the audit baseline `1a77022` (docs-only changes since).
@@ -35,3 +50,18 @@
 - **Handoff:** [`QA_HANDOFF.md`](./QA_HANDOFF.md) with changed files, migration/backup proof, CI command results, cloud-browser evidence, dependency decision (none added) and the 30-row developer self-check (developer evidence only; 29 PASS / 1 PARTIAL — row 29 browser scope).
 - **CI:** scoped workflow `.github/workflows/module-009-ci.yml` under `MODULE_009_CI_PERMISSION_APPROVAL.md`; Node 24; typecheck, lint (12 pre-existing warnings, 0 new), build, 186/186 tests, diff check and cloud Chrome smoke pass.
 - **Not done / not authorized:** no merge, no Issue #19 closure, no QA PASS claim, no Module 010, B2B/B3, Codex Queue, scheduler or service.
+
+## Module 009 Cloud Run02 authority conflict — Design decision (2026-11-22)
+
+- **New source evidence:** [`MODULE_009_DEV_RUN02_CLOUD.tex`](https://github.com/zyyu1/personal-workspace/blob/77cedf7/docs/handoffs/009/reports/MODULE_009_DEV_RUN02_CLOUD.tex) (evidence-only branch) reports implementation on existing [Draft PR #20](https://github.com/zyyu1/personal-workspace/pull/20), observed HEAD `845c82513f4ff233035d572146423eeed9eec7f4` and a time-overlapping cloud instruction vs later Run01 STOP. Current PR diff has actual source, tests and QA_HANDOFF, not just CI (the earlier CI-only snapshot above remains chronological history, not current).
+- **Verified CI evidence:** GitHub [Actions run 45047487262](https://github.com/zyyu1/personal-workspace/actions/runs/45047487262) is SUCCESS at `ed1c4095c0b9b6990da02d6fc0164decb7b03307`, before the later docs-only PR HEAD. Reported 186/186 tests, no lint errors/12 existing warnings, cloud Chrome 1440/1024/390; **not independent QA** and not proof of the later HEAD.
+- **Developer self-check:** **29 PASS / 1 PARTIAL** (row 29: Windows-host/file-permission browser evidence missing). QA 30-row frozen matrix remains **INDEPENDENT QA NOT STARTED / NO ACCEPTANCE CLAIM**.
+- **Conflict:** PR #20 was observed OPEN/DRAFT/UNMERGED and `mergeable_state=dirty` because main and branch both appended STATUS histories. **Do not merge PR #20 into main**.
+- **Formal superseding scoped authorization:** [`MODULE_009_CLOUD_CONFLICT_RECONCILIATION_AUTHORIZATION.md`](./MODULE_009_CLOUD_CONFLICT_RECONCILIATION_AUTHORIZATION.md), main commit `ee7a65ebf1bd9acb7ad51b162d0e90ea43af9ccf`: **ONE-TIME CLOUD Git-ONLY main→branch ordinary merge, preserve both STATUS histories, re-run exact-head CI, submit Review Only QA request, STOP**. This supersedes the prior cloud STOP **only for this branch maintenance/handoff**, not for continued source development. Windows-specific row29 verification remains a future QA gate.
+- **Current governance gate:** **DESIGN FROZEN / IMPLEMENTATION CANDIDATE EXISTS / CONFLICT RECONCILIATION AUTHORIZED BUT NOT YET PERFORMED / INDEPENDENT QA PENDING / MERGE HOLD**. Issue #19 remains OPEN; no Module 010, B2B/B3, background daemon or real Codex Queue.
+
+## Current resolution — main→branch reconciliation performed (2026-11-22; CURRENT)
+
+- **Authority:** [`MODULE_009_CLOUD_CONFLICT_RECONCILIATION_AUTHORIZATION.md`](./MODULE_009_CLOUD_CONFLICT_RECONCILIATION_AUTHORIZATION.md) (main `ee7a65e`, recorded `37790dd`). This one-time exception supersedes the earlier cloud-operator STOP **only** for this Git reconciliation, the exact-head CI rerun and the Review Only QA request. It is not an approval of further cloud source development, and the earlier STOP and Run02 records above stay as written.
+- **Action:** ordinary non-force merge of `origin/main` `37790dd6f3d70afd6cd28d4588dc7ec31e10b4ca` into `codex/module-009` `845c82513f4ff233035d572146423eeed9eec7f4`. The only conflict was this file; both append-only histories are kept in chronological order. No application code, test, dependency or workflow change in the merge.
+- **Gate:** exact-head CI rerun required before the Review Only QA request; developer self-check stays **29 PASS / 1 PARTIAL** (row 29 Windows-host / file-permission browser evidence still missing). **INDEPENDENT QA PENDING / PR #20 DRAFT / MERGE HOLD.** Issue #19 OPEN. No Module 010, B2B/B3, Codex Queue, scheduler or service.
