@@ -19,3 +19,10 @@
 2. 2026-11-22 — User explicitly approved Module 009 product design; Design Window froze `DESIGN_APPROVED.md` in commit `e27cc9d5660e57807063fa11a41eb00e9451e1de`, preserving the original draft.
 3. 2026-11-22 — Design Window completed accepted-main technical audit and three-candidate GitHub OSS due diligence; published `EXECUTION_INSTRUCTION.md` and the **independent** `MODULE_009_START_AUTHORIZATION.md`; opened work [Issue #19](https://github.com/zyyu1/personal-workspace/issues/19).
 4. **Current gate:** **DESIGN APPROVED / FROZEN; CODE START AUTHORIZED / NOT EXECUTED; QA NOT STARTED; MERGE HOLD.**
+
+## Scoped CI permission addendum — 2026-11-22
+
+- **User decision:** **APPROVED** a narrowly scoped GitHub Actions CI configuration/execution permission for the interactive Module 009 development window. [Formal CI approval](./MODULE_009_CI_PERMISSION_APPROVAL.md) on main commit `34d9b5e78701daa52d1d05aea82318e996b74e4f`.
+- **CI scope:** one read-only checkout workflow for the Module 009 PR, Typecheck/Lint/Build/Tests/Diff; restrict trigger/job to `codex/module-009`, read-only token, no secrets, no deployment, no repository-settings/branch-protection edits.
+- **Factual implementation status at approval:** GitHub main showed no CI workflow file and Issue #19 contained no detailed CI request comment; this is a controlled *permission to implement CI*, **not** evidence that a workflow is installed, that a GitHub scope was granted, or that CI has passed.
+- **Unchanged gates:** Module 009 code is separately authorized but actual implementation/CI proof pending. Independent Review Only QA and a later separate Design Window merger approval remain mandatory. No Module 010, B2B/B3, scheduler, Codex Queue or unattended automation.
