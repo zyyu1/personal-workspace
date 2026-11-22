@@ -35,3 +35,9 @@
 - **Current main advanced since Run01:** `1101415` → `b6140bd` via two **documentation-only** CI approval commits; Run02 must freshly verify latest `main` and fully read frozen `DESIGN_APPROVED.md` including all 30 rows (Run01 only read its outline).
 - **CI:** Earlier Run01 report's 'CI request pending' statement is superseded: **scoped CI approved** by user and Design Window under `MODULE_009_CI_PERMISSION_APPROVAL.md`; no actual workflow or CI PASS is implied.
 - **Unchanged product gate:** Module 009 **DESIGN APPROVED / CODE START AUTHORIZED CONDITIONAL ON RUN02 PRECHECK / IMPLEMENTATION NOT STARTED / INDEPENDENT QA NOT STARTED / MERGE HOLD**. Issue #19 stays OPEN. No Module 010/B2B/B3/real Codex Queue/background operation.
+
+### Follow-up: Draft CI-only PR #20 exists after Run01 STOP
+
+- Subsequent live GitHub inspection found [PR #20](https://github.com/zyyu1/personal-workspace/pull/20) **OPEN / DRAFT / NOT MERGED**, `codex/module-009` observed HEAD `d131025bf8c7b67f6fcae8ac798c6a662244a974`, with **one CI workflow file only** (`.github/workflows/module-009-ci.yml`, +77 lines). This state arose **after** Run01's historical report that the branch/PR were absent; it does not indicate executable 009 application code or a passed CI/QA.
+- **Operator handoff update:** [Run01 disposition with post-decision addendum](./MODULE_009_PREFLIGHT_RUN01_DISPOSITION.md) now requires local Windows Run02 to **inspect/reuse existing PR #20 and branch**, verify current HEAD and CI-only diff, and safely reconcile latest main without force/reset/rebase. No second branch or PR should be created for the same approved work.
+- **Remaining status:** Run01 cloud environment blocked; local Windows development environment not yet validated; implementation/QA **NOT VERIFIED**; **MERGE HOLD**. Issue #19 remains the work order; any later branch changes must be reviewed at execution time.
