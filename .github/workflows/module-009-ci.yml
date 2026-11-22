@@ -59,6 +59,7 @@ jobs:
         run: npm run lint
 
       - name: Build
+        id: build
         if: success() || failure()
         run: npm run build
 
@@ -69,3 +70,15 @@ jobs:
       - name: Diff check against PR base
         if: success() || failure()
         run: git diff --check "origin/${{ github.base_ref }}...HEAD"
+
+      # Cloud-runner evidence only (headless Chrome preinstalled on ubuntu-latest, `vite preview` from devDependencies).
+      # Not a substitute for Windows host / native file-picker validation. No extra permissions, secrets or dependencies.
+      - name: Browser smoke (cloud Chrome, 1440/1024/390)
+        if: (success() || failure()) && steps.build.outcome == 'success'
+        run: |
+          npx vite preview --host 127.0.0.1 --port 4173 --strictPort > /tmp/preview.log 2>&1 &
+          CHROME=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)
+          "$CHROME" --version
+          "$CHROME" --headless=new --no-sandbox --disable-gpu --remote-debugging-port=9222 --user-data-dir="$(mktemp -d)" about:blank > /tmp/chrome.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:4173 >/dev/null && curl -sf http://127.0.0.1:9222/json/version >/dev/null && break; sleep 1; done
+          node tools/ci/module-009-browser-smoke.mjs
