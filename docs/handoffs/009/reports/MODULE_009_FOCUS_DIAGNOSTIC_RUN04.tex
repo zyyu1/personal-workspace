@@ -1,0 +1,72 @@
+% Module 009 -- Focus diagnostic run (Run 04) report (evidence only)
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.1cm]{geometry}
+\usepackage{booktabs,tabularx,hyperref,xcolor,enumitem}
+\newcommand{\sha}[1]{\texttt{\small #1}}
+\newcommand{\PASS}{\textcolor{green!50!black}{\textbf{PASS}}}
+\newcommand{\FAIL}{\textcolor{red!70!black}{\textbf{FAIL}}}
+\title{Module 009 --- Focus Diagnostic Run 04\\CI \PASS{} at \texttt{a042be2}; Review Only QA Requested; STOP}
+\author{Claude Code Cloud Development / Execution Window}
+\date{2026-11-22 (Europe/Berlin)}
+\begin{document}
+\maketitle
+\section*{Summary}
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+Authority & \texttt{MODULE\_009\_FOCUS\_DIAGNOSTIC\_SCRIPT\_REMEDIATION\_AUTHORIZATION.md} (main) \\
+Commit & \sha{a042be2304bee7ef56678d719ea3a09999a95cce} (parent \sha{b9fd763}); one file: \texttt{tools/ci/module-009-browser-smoke.mjs}; author yu ziyi; normal push \\
+CI & \href{https://github.com/zyyu1/personal-workspace/actions/runs/45050344151}{run 45050344151}, attempt 1, tested SHA \sha{a042be2}: \textbf{success} (no rerun) \\
+QA request & \href{https://github.com/zyyu1/personal-workspace/pull/20\#issuecomment-7082997195}{PR \#20 comment}, \href{https://github.com/zyyu1/personal-workspace/issues/19\#issuecomment-7082999148}{Issue \#19 comment} \\
+State & PR \#20 OPEN/DRAFT/unmerged, \texttt{mergeable\_state=clean}; Issue \#19 OPEN; self-check 29 PASS / 1 PARTIAL \\
+\bottomrule
+\end{tabularx}
+
+\section{Preflight}
+PR \#20 OPEN/DRAFT/UNMERGED with head exactly \sha{b9fd763}; clean worktree on \texttt{codex/module-009}; no active CI run.
+
+\section{Script change (diagnostic only)}
+\begin{itemize}[nosep]
+  \item A \texttt{MutationObserver} timestamps the moment the inspector element is removed and records the immediate \texttt{document.activeElement} at that moment (the earlier single read, preserved).
+  \item Polls every 25\,ms, up to 1000\,ms, for \texttt{document.activeElement === expectedInput} where \texttt{expectedInput} is the same create-input element captured before Escape, and still connected. Logs \texttt{initialFocus}, \texttt{restoredFocus}, \texttt{restorationLatencyMs}, \texttt{timeout}, \texttt{targetConnected}.
+  \item Fails on timeout, wrong or disconnected target, or inspector not closing; flags $>$250\,ms as potential user-visible delay. Never calls \texttt{focus()}.
+  \item 5 full create$\to$inspector$\to$Escape cycles per viewport (15 total). All earlier checks kept; three made stricter (focus-inside asserted, past-papers empty state asserted, calendar one-event check at all three viewports).
+\end{itemize}
+No change to \texttt{InspectorShell}, \texttt{ExamsView}, other source, tests, workflow, \texttt{package.json} or lockfile.
+
+\section{Results at \sha{a042be2}}
+npm ci, typecheck, build, diff-check \PASS; lint \PASS{} (0 errors, 12 pre-existing Research warnings); tests \PASS{} 186/186; browser smoke \PASS{} 30/30 checks.
+
+\begin{tabularx}{\textwidth}{@{}lXl@{}}
+\toprule
+Viewport & Restoration latency, cycles 1--5 (ms) & Immediate focus \\
+\midrule
+1440$\times$900 & 26, 8, 8, 11, 8 & \texttt{body} (5/5) \\
+1024$\times$768 & 26, 25, 10, 8, 27 & \texttt{body} (5/5) \\
+390$\times$844 & 28, 5, 6, 5, 26 & \texttt{body} (5/5) \\
+\bottomrule
+\end{tabularx}
+\medskip
+15/15 restored to the same connected input; 0 timeouts; 0 cycles $>$250\,ms; max 28\,ms. Also: no overflow, DST gap rejected in UI, deep-link reload persisted, one calendar event per exam, 0 console errors (default \texttt{/favicon.ico} 404 listed separately).
+
+\paragraph{Interpretation (developer, not QA).} Focus is never on the input at the instant the inspector is removed; it arrives 5--28\,ms later when \texttt{InspectorShell}'s unmount effect runs. This matches the two earlier failures (single immediate read) being a script read-timing race. Independent QA must still judge whether this transient \texttt{body} focus is acceptable.
+
+\section{Disclosed history}
+\begin{tabularx}{\textwidth}{@{}llX@{}}
+\toprule
+Run & Head & Result \\
+\midrule
+45047487262 & \sha{ed1c409} & success \\
+45049036051 a1 & \sha{b9fd763} & failure --- 1440$\times$900 \texttt{focusLabel=null} \\
+45049036051 a2 & \sha{b9fd763} & failure --- 1024$\times$768 \texttt{focusLabel=null} \\
+45050344151 & \sha{a042be2} & success --- 15/15 focus cycles \\
+\bottomrule
+\end{tabularx}
+
+\section{Open items for independent QA}
+Row 29 PARTIAL (no Windows host, no browser permission-required flow); transient focus; legacy calendar replacement policy; DST/\texttt{Intl} behaviour (no Temporal dependency); CI browser-smoke scope question; Node 24 pin.
+
+\section{Scope confirmation}
+One script commit, one natural CI run, no rerun. No app change, no merge, PR kept DRAFT, no QA acceptance claim, Issue \#19 open. No Module 010, B2B/B3, Codex Queue, scheduler or service. Now STOPPED.
+\end{document}
