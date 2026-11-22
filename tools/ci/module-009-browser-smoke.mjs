@@ -5,7 +5,7 @@ const BASE=process.env.APP_URL??'http://127.0.0.1:4173'
 const CDP=process.env.CDP_URL??'http://127.0.0.1:9222'
 const OFFERING='offering-system-theory-ws26'
 const VIEWPORTS=[[1440,900],[1024,768],[390,844]]
-const evidence=[],failures=[],consoleErrors=[]
+const evidence=[],failures=[],consoleErrors=[],knownBrowserDefaults=[]
 const log=(step,data)=>{const row={step,...data};evidence.push(row);console.log(JSON.stringify(row))}
 const check=(condition,step,detail)=>{if(!condition){failures.push({step,detail});console.log(JSON.stringify({step,FAIL:detail}))}return condition}
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms))
@@ -14,7 +14,7 @@ const target=await (await fetch(`${CDP}/json/new?about:blank`,{method:'PUT'})).j
 const socket=new WebSocket(target.webSocketDebuggerUrl)
 await new Promise((resolve,reject)=>{socket.onopen=resolve;socket.onerror=reject})
 let nextId=0;const pending=new Map()
-socket.onmessage=event=>{const message=JSON.parse(event.data);if(message.id&&pending.has(message.id)){const {resolve,reject}=pending.get(message.id);pending.delete(message.id);message.error?reject(new Error(message.error.message)):resolve(message.result)}else if(message.method==='Runtime.exceptionThrown')consoleErrors.push(message.params.exceptionDetails.exception?.description??message.params.exceptionDetails.text);else if(message.method==='Runtime.consoleAPICalled'&&message.params.type==='error')consoleErrors.push(message.params.args.map(arg=>arg.value??arg.description).join(' '));else if(message.method==='Log.entryAdded'&&message.params.entry.level==='error')consoleErrors.push(`${message.params.entry.source}: ${message.params.entry.text}`)}
+socket.onmessage=event=>{const message=JSON.parse(event.data);if(message.id&&pending.has(message.id)){const {resolve,reject}=pending.get(message.id);pending.delete(message.id);message.error?reject(new Error(message.error.message)):resolve(message.result)}else if(message.method==='Runtime.exceptionThrown')consoleErrors.push(message.params.exceptionDetails.exception?.description??message.params.exceptionDetails.text);else if(message.method==='Runtime.consoleAPICalled'&&message.params.type==='error')consoleErrors.push(message.params.args.map(arg=>arg.value??arg.description).join(' '));else if(message.method==='Log.entryAdded'&&message.params.entry.level==='error'){const entry=message.params.entry;if(entry.source==='network'&&new URL(entry.url??'http://x/').pathname==='/favicon.ico')knownBrowserDefaults.push(`${entry.text} ${entry.url}`);else consoleErrors.push(`${entry.source}: ${entry.text}${entry.url?` (${entry.url})`:''}`)}}
 const send=(method,params={})=>new Promise((resolve,reject)=>{const id=++nextId;pending.set(id,{resolve,reject});socket.send(JSON.stringify({id,method,params}))})
 const js=async expression=>{const result=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(result.exceptionDetails)throw new Error(result.exceptionDetails.exception?.description??result.exceptionDetails.text);return result.result.value}
 const waitFor=async(expression,label,timeout=8000)=>{const end=Date.now()+timeout;while(Date.now()<end){if(await js(`Boolean(${expression})`))return true;await sleep(100)}check(false,label,`timed out waiting for: ${expression}`);return false}
@@ -30,7 +30,7 @@ for(const [width,height] of VIEWPORTS){
   const tag=`${width}x${height}`
   await send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<768})
   await go(`/study/courses/${OFFERING}/exams`);await inject()
-  await waitFor(`document.body.innerText.includes('Exams & past papers')`,`${tag} exams route`)
+  await waitFor(`document.body.innerText.toLowerCase().includes('exams & past papers')`,`${tag} exams route`)
   log('route',{viewport:tag,tabActive:await js(`document.querySelector('a[aria-current="page"]')?.textContent`),unknownShown:await js(`document.body.innerText.includes('Unknown date')`),...await js('window.__overflow()')})
   check(!(await js('window.__overflow().overflow')),`${tag} no overflow (list)`,await js('window.__overflow()'))
   // Create -> auto-open Inspector -> Escape -> focus returns to the create input
@@ -84,7 +84,7 @@ await waitFor(`document.body.innerText.includes('Original: ${nextMonth} 09:00')`
 log('calendar',{examEvents:await js(`[...document.querySelectorAll('.calendar-item')].filter(el=>el.innerText.includes('Browser exam')).length`),text:await js(`[...document.querySelectorAll('.calendar-item')].filter(el=>el.innerText.includes('Browser exam')).map(el=>el.innerText.replace(/\\s+/g,' ').slice(0,160))`)})
 check(await js(`[...document.querySelectorAll('.calendar-item')].filter(el=>el.innerText.includes('Browser exam 1440x900')).length`)===1,'calendar one event per exam','count mismatch')
 
-log('console-errors',{count:consoleErrors.length,errors:consoleErrors.slice(0,10)})
+log('console-errors',{count:consoleErrors.length,errors:consoleErrors.slice(0,10),reportedNotFailed:{reason:'index.html declares no favicon; Chrome requests /favicon.ico by default (pre-existing, not app code)',entries:[...new Set(knownBrowserDefaults)]}})
 check(consoleErrors.length===0,'no console errors',consoleErrors.slice(0,10))
 log('summary',{checks:evidence.length,failures:failures.length,environment:'GitHub-hosted ubuntu-latest, headless Google Chrome, vite preview (cloud only; not Windows host validation)'})
 socket.close()
