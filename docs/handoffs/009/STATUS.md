@@ -1,20 +1,21 @@
-# Module 009 Status — Design Approved / Implementation Hold
+# Module 009 Status — Design Approved / Code Start Authorized
 
 - **Module:** 009
 - **Name:** Study Workspace — Exams & Past Papers V1.0
 - **Design state:** **APPROVED / DESIGN FROZEN** — user approved the V1.0 scope and D1–D6 design decisions on **2026-11-22 (Europe/Berlin)**.
 - **Authoritative frozen design:** [`DESIGN_APPROVED.md`](./DESIGN_APPROVED.md) — frozen product scope, entity ownership, UI/UX, date precision/provenance, registration and real sitting/history contracts, per-offering practice, v2→v3 migration plan, and **30 frozen future acceptance requirements**.
 - **Historical review draft:** [`DESIGN_DRAFT.md`](./DESIGN_DRAFT.md) remains intact as the previous design-review artifact. Its `NOT APPROVED` status reflects the earlier stage only, not the current design gate.
-- **Implementation:** **NOT AUTHORIZED / NOT STARTED / HOLD**. No `EXECUTION_INSTRUCTION.md`, no separate 009 start authorization, no development branch or PR has been approved by this design freeze. No code or schema changes occurred in this Design Window.
+- **Implementation:** **START AUTHORIZED FOR CODE ONLY / NOT YET EXECUTED / PR NOT OPEN / MERGE HOLD**. Distinct [`MODULE_009_START_AUTHORIZATION.md`](./MODULE_009_START_AUTHORIZATION.md) and [`EXECUTION_INSTRUCTION.md`](./EXECUTION_INSTRUCTION.md) now published; [Issue #19](https://github.com/zyyu1/personal-workspace/issues/19) OPEN. Publishing the authority has **not** modified source, created a code branch/PR, started Claude/Codex or authorized any merge.
 - **Independent QA:** **NOT STARTED**. The frozen 30-row acceptance matrix is a future validation requirement, **not** an assertion that 30 tests or QA checks passed.
 - **Prerequisites for design:** Module 008 [PR #18](https://github.com/zyyu1/personal-workspace/pull/18) MERGED at `48558a862b299b030fbd680aa9677115c92ca773`, accepted candidate `d366710e51f5f4ab1cb6a10cb2919c46549afaed`, independent QA **30 PASS / 0 PARTIAL / 0 FAIL**; Issue #17 CLOSED. Module 007 previously fully accepted.
-- **Source interface review:** actual `study-courses` v2, `CourseAssessment`, `StudyTabs`, `StudyCourseService`, `GlobalCalendarService`, `CourseExerciseSet/Item/Attempt`, canonical Resources/Tasks/Timer/TimeEntry/Resume inspected at design review. These must be **reverified on latest main** before code start.
+- **Source interface review:** actual accepted `main` contracts audited in [`CURRENT_MAIN_INTERFACE_AND_MIGRATION_AUDIT.md`](./CURRENT_MAIN_INTERFACE_AND_MIGRATION_AUDIT.md) against source code anchor `1a77022f0b1af013e137ec01cd3942e7028e3c0b`; **compatibility conditional PASS** for bounded implementation, including safe `v1/v2→v3`. Development must reverify **latest main** before coding.
 - **Approved design decisions:** D1 Course-wide Past Paper with explicit offering-scoped practice; D2 explicit date precision, verified source and distinct registration milestones; D3 manually recorded paper-level practice with optional 008 per-question mapping; D4 existing offering-scoped Calendar reuse, no implicit full cross-domain rewrite; D5 real sitting and official/self-reported outcomes separated from practice; D6 mandatory **three-project current GitHub OSS evaluation** before implementation.
-- **Next gate:** Design Window must complete current-main contract compatibility check and GitHub OSS evaluation, then present and obtain a **distinct explicit implementation authorization**. Approval of this design does not imply auto-release of source coding.
-- **Other modules/automation:** Module 010 NOT AUTHORIZED; B2B paused; B3, background watcher/service/scheduler, cloud agent or real Codex Queue NOT AUTHORIZED.
+- **OSS and execution release:** Three verified candidates and five-factor analysis recorded in [`OSS_REUSE_REVIEW.md`](./OSS_REUSE_REVIEW.md); preferred conditional `@js-temporal/polyfill`, at most one timezone dependency after verification. **Separate code-only start approval granted** in [`MODULE_009_START_AUTHORIZATION.md`](./MODULE_009_START_AUTHORIZATION.md), to a user-initiated interactive Claude Code window after clean-main preflight. **Next gate: developer PR + QA handoff → independent Review Only QA**. No merge authority.
+- **Other modules/automation:** Module 010 NOT AUTHORIZED; B2B paused; B3, background watcher/service/scheduler, unattended cloud agent or real Codex Queue NOT AUTHORIZED. Interactive Claude Code for **Module 009 repository coding only** is now explicitly permitted, not auto-launched.
 
 ## Design review chronology
 
 1. 2026-11-22 — Module 009 `DESIGN_DRAFT.md` published as **DRAFT / NOT APPROVED**; prototype code work explicitly held.
 2. 2026-11-22 — User explicitly approved Module 009 product design; Design Window froze `DESIGN_APPROVED.md` in commit `e27cc9d5660e57807063fa11a41eb00e9451e1de`, preserving the original draft.
-3. **Current gate:** **DESIGN APPROVED / FROZEN; IMPLEMENTATION AND QA NOT STARTED.**
+3. 2026-11-22 — Design Window completed accepted-main technical audit and three-candidate GitHub OSS due diligence; published `EXECUTION_INSTRUCTION.md` and the **independent** `MODULE_009_START_AUTHORIZATION.md`; opened work [Issue #19](https://github.com/zyyu1/personal-workspace/issues/19).
+4. **Current gate:** **DESIGN APPROVED / FROZEN; CODE START AUTHORIZED / NOT EXECUTED; QA NOT STARTED; MERGE HOLD.**
