@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   verify:
-    name: verify (typecheck, lint, build, test, diff-check)
+    name: verify node${{ matrix.node }} (typecheck, lint, build, test, diff-check)
     # `branches` above filters the PR base; this guard restricts the PR head.
     if: >-
       github.repository == 'zyyu1/personal-workspace' &&
@@ -24,6 +24,10 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [22, 24]
     steps:
       - name: Checkout exact PR head
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -35,7 +39,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: 22
+          node-version: ${{ matrix.node }}
           cache: npm
 
       - name: Record tested SHA
@@ -68,7 +72,7 @@ jobs:
         run: git diff --check "origin/${{ github.base_ref }}...HEAD"
 
       - name: Upload build output for browser QA
-        if: success()
+        if: success() && matrix.node == 24
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: module-009-dist-${{ github.event.pull_request.head.sha }}
