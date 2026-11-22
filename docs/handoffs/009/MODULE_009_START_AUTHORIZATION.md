@@ -12,7 +12,7 @@
 - [Latest-main interface and migration audit](./CURRENT_MAIN_INTERFACE_AND_MIGRATION_AUDIT.md): compatibility conditional PASS at actual code baseline `1a77022f0b1af013e137ec01cd3942e7028e3c0b`; mandatory v1/v2→v3, Calendar, Task, Resource, Resume guards identified. Audit is **not implementation QA**.
 - [Three-project OSS assessment](./OSS_REUSE_REVIEW.md): Luxon (MIT), `@date-fns/tz` (MIT, in date-fns monorepo), `@js-temporal/polyfill` (ISC); stars, latest commits, stacks, licensing and adaptation cost checked 2026-11-22. **At most one** verified timezone library may be installed if needed, preferred `@js-temporal/polyfill`, after exact version, lockfile, compatibility and bundle checks. No other new date/calendar framework authorized.
 - **Complete binding implementation plan:** [`EXECUTION_INSTRUCTION.md`](./EXECUTION_INSTRUCTION.md).
-- Real GitHub work issue for this Module 009 release must be created and verified before coding. Its URL should be linked into this document once issued; the absence of the issue is a **preflight STOP**.
+- **Real GitHub development work order:** [Issue #19 — Module 009 Code Start Authorized](https://github.com/zyyu1/personal-workspace/issues/19), OPEN at release. The interactive executor must verify this issue still carries the same frozen scope and code-only gate before coding; missing or unexpectedly closed/changed issue requires STOP.
 
 ## 2. Execution operator / environment
 
