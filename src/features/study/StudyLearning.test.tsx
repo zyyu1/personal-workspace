@@ -31,7 +31,7 @@ describe('Module 008 schema and canonical identities',()=>{
     expect(progress).toMatchObject({id:'progress-old',offeringId,targetType:'resource',targetId:'resource-old',resourceId:'resource-old',sectionId:'section-old',state:'reviewed',studyState:'studied',noteId:'note-old'})
     expect(migrated.entries[0]).toMatchObject({id:'entry-old',manualClassification:true,classification:'notes'})
     expect(migrated).toMatchObject({learningUnits:[],exerciseSets:[],exerciseItems:[],attempts:[],evidenceLinks:[]})
-    expect(adapter.backups.some(row=>row.metadata.stage==='schema-migration'&&row.metadata.sourceSchemaVersion===1&&row.metadata.targetSchemaVersion===2)).toBe(true)
+    expect(adapter.backups.some(row=>row.metadata.stage==='schema-migration'&&row.metadata.sourceSchemaVersion===1&&row.metadata.targetSchemaVersion===3)).toBe(true)
   })
 
   it('isolates all learning records by CourseOffering',async()=>{

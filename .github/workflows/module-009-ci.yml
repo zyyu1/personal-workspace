@@ -1,0 +1,84 @@
+# Module 009 scoped CI — see docs/handoffs/009/MODULE_009_CI_PERMISSION_APPROVAL.md
+# Runs only for the Module 009 implementation PR (codex/module-009 -> main).
+# Read-only token, no secrets, no deploy, no auto-merge.
+name: Module 009 CI
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: module-009-ci-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify (typecheck, lint, build, test, diff-check)
+    # `branches` above filters the PR base; this guard restricts the PR head.
+    if: >-
+      github.repository == 'zyyu1/personal-workspace' &&
+      github.head_ref == 'codex/module-009' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact PR head
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          # Node 24: baseline main passes 160/160 here; on Node 22 three
+          # pre-existing ZIP manifest tests fail (jsdom File/Blob interop),
+          # diagnosed in run 45045970624. No application code involved.
+          node-version: 24
+          cache: npm
+
+      - name: Record tested SHA
+        run: |
+          echo "Tested HEAD: $(git rev-parse HEAD)"
+          node --version
+          npm --version
+
+      - name: Install (npm ci, committed lockfile)
+        run: npm ci
+
+      - name: Typecheck
+        if: success() || failure()
+        run: npm run typecheck
+
+      - name: Lint
+        if: success() || failure()
+        run: npm run lint
+
+      - name: Build
+        id: build
+        if: success() || failure()
+        run: npm run build
+
+      - name: Test
+        if: success() || failure()
+        run: npm test -- --run
+
+      - name: Diff check against PR base
+        if: success() || failure()
+        run: git diff --check "origin/${{ github.base_ref }}...HEAD"
+
+      # Cloud-runner evidence only (headless Chrome preinstalled on ubuntu-latest, `vite preview` from devDependencies).
+      # Not a substitute for Windows host / native file-picker validation. No extra permissions, secrets or dependencies.
+      - name: Browser smoke (cloud Chrome, 1440/1024/390)
+        if: (success() || failure()) && steps.build.outcome == 'success'
+        run: |
+          npx vite preview --host 127.0.0.1 --port 4173 --strictPort > /tmp/preview.log 2>&1 &
+          CHROME=$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)
+          "$CHROME" --version
+          "$CHROME" --headless=new --no-sandbox --disable-gpu --remote-debugging-port=9222 --user-data-dir="$(mktemp -d)" about:blank > /tmp/chrome.log 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://127.0.0.1:4173 >/dev/null && curl -sf http://127.0.0.1:9222/json/version >/dev/null && break; sleep 1; done
+          node tools/ci/module-009-browser-smoke.mjs
