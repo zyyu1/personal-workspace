@@ -2,13 +2,15 @@ import { GlobalTaskService } from './globalTaskService'
 import { PlanningService } from '../features/research/planning/services/planningService'
 import { SubmissionService } from '../features/research/submissions/services/submissionService'
 import { StudyCourseService } from '../features/study/services/studyCourseService'
+import { StudyExamService, isCalendarEligible } from '../features/study/services/studyExamService'
+import type { ExamMilestone } from '../features/study/types'
 import { parseSafeExternalUrl } from './safeExternalUrl'
 
 export type CalendarItemKind='deadline'|'event'|'planned-session'|'daily-task-assignment'
 export interface CalendarItem{
   id:string
   canonicalSourceId:string
-  sourceType:'task-due-date'|'fixed-event'|'planned-session'|'daily-task-assignment'|'submission-deadline'|'assessment-deadline'
+  sourceType:'task-due-date'|'fixed-event'|'planned-session'|'daily-task-assignment'|'submission-deadline'|'assessment-deadline'|'exam-milestone'
   kind:CalendarItemKind
   projectId:string
   title:string
@@ -21,6 +23,8 @@ export interface CalendarItem{
   verification?:string
   sourceUrl?:string
   precision?:string
+  /** Original civil date/time as recorded (e.g. `2027-02-10 09:00`), shown alongside the viewer-local rendering. */
+  originalLocal?:string
 }
 
 const dedupe=(items:CalendarItem[])=>[...new Map(items.map(item=>[`${item.sourceType}:${item.canonicalSourceId}`,item])).values()]
@@ -34,6 +38,7 @@ export const GlobalCalendarService={
     const planning=isStudy?{events:[]}:await PlanningService.getSnapshot(projectId)
     const submissions=isStudy?{targets:[],opportunities:[],venues:[],evidence:[],deadlines:[]}:await SubmissionService.getSnapshot(projectId)
     const assessments=isStudy?await StudyCourseService.listVerifiedAssessments(projectId):[]
+    const exams=isStudy?await StudyExamService.calendarSources(projectId):{assessments:[],milestones:[]}
     const items:CalendarItem[]=[]
     for(const task of tasks){
       const taskRoute=task.area==='study'?`/tasks?task=${encodeURIComponent(task.id)}`:`/research/projects/${projectId}/tasks?task=${encodeURIComponent(task.id)}`
@@ -47,7 +52,21 @@ export const GlobalCalendarService={
       const opportunity=submissions.opportunities.find(row=>row.id===deadline.opportunityId),venue=submissions.venues.find(row=>row.id===opportunity?.venueId),evidence=submissions.evidence.find(row=>row.id===deadline.evidenceId)
       items.push({id:`calendar-submission:${deadline.id}`,canonicalSourceId:deadline.id,sourceType:'submission-deadline',kind:'deadline',projectId,title:`${venue?.canonicalName??'Submission'} · ${deadline.eventType}`,date:deadline.originalLocalDatetime?.slice(0,10)??'',start:deadline.datePrecision==='exact'?deadline.utcInstant:undefined,end:deadline.datePrecision==='exact'?deadline.utcInstant:undefined,route:`/research/venues/${venue?.id}/opportunities/${deadline.opportunityId}`,timezone:deadline.originalTimezone,verification:deadline.verificationStatus,sourceUrl:evidence?.url,precision:deadline.datePrecision})
     }
-    for(const assessment of assessments)items.push({id:`calendar-assessment:${assessment.id}`,canonicalSourceId:assessment.id,sourceType:'assessment-deadline',kind:'deadline',projectId:assessment.offeringId,title:assessment.title,date:assessment.officialDateTime!.slice(0,10),start:assessment.officialDateTime,end:assessment.officialDateTime,route:`/study/courses/${assessment.offeringId}/overview`,timezone:assessment.originalTimezone,verification:'verified',sourceUrl:safeSourceUrl(assessment.provenance),precision:'exact'})
+    // Module 009: one canonical event per real exam. An eligible active `exam` milestone REPLACES the legacy
+    // 007 projection for the same assessment (same id/canonicalSourceId), never adding a second event.
+    const examAssessmentIds=new Set<string>()
+    const milestoneLabel:Record<ExamMilestone['kind'],string>={'registration-open':'Registration opens','registration-close':'Registration closes','withdrawal-close':'Withdrawal deadline',exam:'Exam','grade-release':'Grade release'}
+    for(const milestone of exams.milestones){
+      const assessment=exams.assessments.find(row=>row.id===milestone.assessmentId)
+      if(!assessment)continue
+      if(milestone.kind==='exam'&&milestone.status==='active')examAssessmentIds.add(assessment.id)
+      if(!isCalendarEligible(milestone,assessment))continue
+      const exact=milestone.datePrecision==='exact',base={kind:'deadline' as const,projectId:assessment.offeringId,date:milestone.localDate!,start:exact?milestone.instant:undefined,end:exact?milestone.instant:undefined,route:`/study/courses/${assessment.offeringId}/exams?assessment=${encodeURIComponent(assessment.id)}`,timezone:milestone.timezone,verification:milestone.verificationStatus,sourceUrl:safeSourceUrl(milestone.sourceUrl),precision:milestone.datePrecision,originalLocal:exact?`${milestone.localDate} ${milestone.localTime}`:milestone.localDate}
+      if(milestone.kind==='exam')items.push({...base,id:`calendar-assessment:${assessment.id}`,canonicalSourceId:assessment.id,sourceType:'assessment-deadline',title:assessment.title})
+      else items.push({...base,id:`calendar-exam-milestone:${milestone.id}`,canonicalSourceId:milestone.id,sourceType:'exam-milestone',title:`${milestoneLabel[milestone.kind]} · ${assessment.title}`})
+    }
+    const inactive=new Set(exams.assessments.filter(row=>row.lifecycle&&row.lifecycle!=='active').map(row=>row.id))
+    for(const assessment of assessments.filter(row=>!examAssessmentIds.has(row.id)&&!inactive.has(row.id)))items.push({id:`calendar-assessment:${assessment.id}`,canonicalSourceId:assessment.id,sourceType:'assessment-deadline',kind:'deadline',projectId:assessment.offeringId,title:assessment.title,date:assessment.officialDateTime!.slice(0,10),start:assessment.officialDateTime,end:assessment.officialDateTime,route:`/study/courses/${assessment.offeringId}/overview`,timezone:assessment.originalTimezone,verification:'verified',sourceUrl:safeSourceUrl(assessment.provenance),precision:'exact'})
     return dedupe(items).filter(item=>item.date&&(!filters?.sourceType||filters.sourceType==='all'||item.sourceType===filters.sourceType)).sort((a,b)=>(a.start??a.date).localeCompare(b.start??b.date))
   },
 }

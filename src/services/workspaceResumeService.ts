@@ -4,8 +4,9 @@ import { LiteratureService } from '../features/research/literature/services/lite
 import { ExperimentRepository } from '../features/research/experiments/services/experimentRepository'
 import { GlobalResourceService } from './globalResourceService'
 import { StudyLearningService } from '../features/study/services/studyLearningService'
+import { StudyExamService } from '../features/study/services/studyExamService'
 
-export type ResumeEntityType='paper'|'task'|'experiment'|'project'|'resource'|'section'|'learning-unit'|'exercise-item'
+export type ResumeEntityType='paper'|'task'|'experiment'|'project'|'resource'|'section'|'learning-unit'|'exercise-item'|'assessment'|'course-past-paper'|'exam-practice'
 export interface WorkspaceResumeContext{id:string;area:'research'|'study'|'work';projectId:string;entityType:ResumeEntityType;entityId:string;route:string;inspectorSelection?:{kind:string;id:string};filters?:Record<string,string>;lastActiveAt:string}
 interface ResumeState{contexts:WorkspaceResumeContext[]}
 const repository=createVersionedRepository<ResumeState>({domain:'resume-contexts',schemaVersion:1,seedVersion:1,seed:()=>({contexts:[]})})
@@ -27,6 +28,7 @@ export const WorkspaceResumeService={
     else if(context.entityType==='experiment')exists=Boolean(await ExperimentRepository.get(projectId,context.entityId))
     else if(context.entityType==='resource')exists=Boolean(await GlobalResourceService.get(context.entityId))
     else if(context.entityType==='learning-unit'||context.entityType==='exercise-item')exists=await StudyLearningService.entityExists(projectId,context.entityType,context.entityId)
+    else if(context.entityType==='assessment'||context.entityType==='course-past-paper'||context.entityType==='exam-practice')exists=context.area==='study'&&await StudyExamService.entityExists(projectId,context.entityType,context.entityId)
     else if(context.entityType==='section')exists=context.area==='study'&&context.projectId===projectId
     else exists=context.entityId===projectId
     return exists?{valid:true,route:context.route,context}:{valid:false,route:fallback,context,reason:'The recent item no longer exists or is inaccessible'}

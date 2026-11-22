@@ -15,6 +15,7 @@ const initial:StudyState={
   sources:[],imports:[],entries:[],sections:sections('offering-system-theory-ws26'),progress:[],
   assessments:[{id:'assessment-system-theory-exam',offeringId:'offering-system-theory-ws26',assessmentType:'exam',title:'Final examination',verified:false,provenance:'Date not yet confirmed'}],
   learningUnits:[],exerciseSets:[],exerciseItems:[],attempts:[],evidenceLinks:[],
+  examMilestones:[],examSittings:[],coursePastPapers:[],pastPaperOfferingLinks:[],pastPaperPractices:[],
 }
 const copy=<T>(value:T):T=>structuredClone(value)
 const legacyStudyState=(value:unknown)=>{
@@ -23,8 +24,9 @@ const legacyStudyState=(value:unknown)=>{
   if(required.some(key=>!Array.isArray(state[key])))throw validationFailure('Stored Study v1 data is incomplete')
   return state
 }
-export const migrateStudyState=(value:unknown,fromVersion:number):StudyState=>{
-  if(fromVersion!==1)throw validationFailure(`Unsupported Study schema ${fromVersion}`)
+type StudyStateV2=Omit<StudyState,'examMilestones'|'examSittings'|'coursePastPapers'|'pastPaperOfferingLinks'|'pastPaperPractices'>
+/** Exact Module 007/008 v1 -> v2 normalization (unchanged). */
+const migrateV1ToV2=(value:unknown):StudyStateV2=>{
   const state=legacyStudyState(value)
   const progress=(state.progress as CourseStudyProgress[]).map(row=>{
     const targetId=row.targetId??row.resourceId??row.sectionId??row.id
@@ -33,7 +35,18 @@ export const migrateStudyState=(value:unknown,fromVersion:number):StudyState=>{
   })
   return{courses:copy(state.courses!),offerings:copy(state.offerings!),sources:copy(state.sources!),imports:copy(state.imports!),entries:copy(state.entries!),sections:copy(state.sections!),progress:copy(progress),assessments:copy(state.assessments!),learningUnits:copy(state.learningUnits??[]),exerciseSets:copy(state.exerciseSets??[]),exerciseItems:copy(state.exerciseItems??[]),attempts:copy(state.attempts??[]),evidenceLinks:copy(state.evidenceLinks??[])}
 }
-export const StudyRepository=createVersionedRepository<StudyState>({domain:'study-courses',schemaVersion:2,seedVersion:1,seed:()=>copy(initial),migrate:migrateStudyState})
+const validateV2=(value:unknown):StudyStateV2=>{
+  const state=legacyStudyState(value),learning=['learningUnits','exerciseSets','exerciseItems','attempts','evidenceLinks'] as const
+  if(learning.some(key=>!Array.isArray(state[key])))throw validationFailure('Stored Study v2 data is incomplete')
+  return copy(state as StudyStateV2)
+}
+/** Schema v3 (Module 009): v1 -> v2 normalization, then add empty exam arrays. Existing IDs and 007/008 records are carried unchanged; no mock exam data is seeded. */
+export const migrateStudyState=(value:unknown,fromVersion:number):StudyState=>{
+  if(fromVersion!==1&&fromVersion!==2)throw validationFailure(`Unsupported Study schema ${fromVersion}`)
+  const v2=fromVersion===1?migrateV1ToV2(value):validateV2(value)
+  return{...v2,examMilestones:[],examSittings:[],coursePastPapers:[],pastPaperOfferingLinks:[],pastPaperPractices:[]}
+}
+export const StudyRepository=createVersionedRepository<StudyState>({domain:'study-courses',schemaVersion:3,seedVersion:1,seed:()=>copy(initial),migrate:migrateStudyState})
 const repository=StudyRepository
 const hash=(value:string)=>{let result=2166136261;for(const char of value){result^=char.codePointAt(0)??0;result=Math.imul(result,16777619)}return(result>>>0).toString(36)}
 const resourceKind=(path:string)=>{const ext=path.split('.').pop()?.toLowerCase();return ext==='md'?'markdown':ext||'file'}
