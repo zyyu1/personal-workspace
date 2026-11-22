@@ -1,0 +1,89 @@
+% Module 009 Read-Only Preflight -- Run 01
+% Producer: Claude Code Cloud Development / Execution Window
+% Consumer: Main (Design) Window
+% Branch: module-009-run-reports (NOT main, NOT codex/module-009)
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+
+\newcommand{\sha}[1]{\texttt{\small #1}}
+\newcommand{\PASS}{\textcolor{green!50!black}{\textbf{PASS}}}
+\newcommand{\FAIL}{\textcolor{red!70!black}{\textbf{FAIL}}}
+\newcommand{\STOP}{\textcolor{red!70!black}{\textbf{STOP}}}
+
+\title{Personal Workspace --- Module 009\\Read-Only Preflight Report (Run 01)}
+\author{Claude Code Cloud Development / Execution Window}
+\date{2026-11-22 (Europe/Berlin)}
+
+\begin{document}
+\maketitle
+
+\section*{Summary}
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+Outcome & \STOP{} --- repository and interface gates PASS; \textbf{execution-environment gate FAIL} \\
+Work order & \href{https://github.com/zyyu1/personal-workspace/issues/19}{Issue \#19} --- OPEN, scope unchanged \\
+Main at preflight & \sha{1101415bcedd264da1440601b29c124157c7aa2a} \\
+\texttt{codex/module-009} & \textbf{not created} \\
+Source / deps changed & none \\
+Awaiting & Design Window decision (Section~\ref{sec:decision}) \\
+\bottomrule
+\end{tabularx}
+
+\section{Authority read}
+Read from \texttt{main} at \sha{1101415}: \texttt{MODULE\_009\_START\_AUTHORIZATION.md}, \texttt{EXECUTION\_INSTRUCTION.md}, \texttt{STATUS.md} and \texttt{CURRENT\_MAIN\_INTERFACE\_AND\_MIGRATION\_AUDIT.md} in full; \texttt{OSS\_REUSE\_REVIEW.md} in full (table cells truncated to 300 chars per line in terminal); \texttt{DESIGN\_APPROVED.md} section outline only (12 sections incl.\ \S10 30-row matrix). Issue \#19 body and Design Window disposition comment (2026-11-22T16:33:54Z) read. The design body and the 30 rows will be read verbatim before any coding; they do not affect the STOP below.
+
+\section{Repository and interface gates}
+\begin{tabularx}{\textwidth}{@{}Xl@{}}
+\toprule
+Gate & Result \\
+\midrule
+Origin \texttt{https://github.com/zyyu1/personal-workspace}; clean worktree (\texttt{git status --short} empty); single worktree & \PASS \\
+Latest main freshly fetched: \sha{1101415} & \PASS \\
+Module 007 merge \sha{cd2c714} in main ancestry & \PASS \\
+Module 008 merge \sha{48558a8} in main ancestry & \PASS \\
+Audit baseline \sha{1a77022} in main ancestry & \PASS \\
+Changes \sha{1a77022}$\to$main: only \texttt{docs/handoffs/009/*} and \texttt{docs/handoffs/INDEX.md} --- no \texttt{src/} change & \PASS \\
+Spot-check of audited contracts on main: \texttt{migrateStudyState} accepts only \texttt{fromVersion===1}; \texttt{StudyRepository} \texttt{schemaVersion:2}; \texttt{ResourceEntityType} has \texttt{paper} but no \texttt{course-past-paper} & \PASS{} (matches audit) \\
+Branch \texttt{codex/module-009} does not exist remotely; no open PR from it (open PRs: \#2, \#13, unrelated) & \PASS \\
+Issue \#19 OPEN, scope = frozen Exams \& Past Papers V1.0, code-only, merge hold & \PASS \\
+\texttt{package.json} has no timezone dependency (matches OSS review) & \PASS \\
+\bottomrule
+\end{tabularx}
+
+\section{Execution-environment gate}
+The start authorization makes these gates \emph{mandatory before PR}: \texttt{npm run typecheck}, \texttt{npm run lint}, \texttt{npm run build}, \texttt{npm test -- --run}, \texttt{git diff --check}, and real-browser checks at 1440$\times$900, 1024$\times$768, 390$\times$844. It also conditionally permits installing \texttt{@js-temporal/polyfill} with an exact pinned version and lockfile update.
+
+\begin{tabularx}{\textwidth}{@{}Xl@{}}
+\toprule
+Check (cloud session) & Result \\
+\midrule
+Node v22.23.5, npm 10.9.9 present & yes \\
+\texttt{node\_modules} present & \FAIL{} (absent) \\
+npm registry reachable (\texttt{npm view vite version}) & \FAIL{} (\texttt{ENOTFOUND registry.npmjs.org}) \\
+Offline install from local cache (\texttt{npm ci --offline}, throwaway worktree, removed afterwards) & \FAIL{} (\texttt{ENOTCACHED}, cache 30\,MB incomplete) \\
+Can run typecheck / lint / build / test & \FAIL \\
+Can install and pin \texttt{@js-temporal/polyfill}, update lockfile, measure bundle & \FAIL \\
+Real-browser check of running app & \FAIL{} (Chrome present, app cannot be built) \\
+\bottomrule
+\end{tabularx}
+
+\paragraph{Why STOP.} Module 009 touches schema v1/v2$\to$v3 migration, DST/zone validation and cross-store idempotency. Writing it without being able to compile or run a single test would produce an unverified PR; the authorization lists ``failed tests'' and ``inability to check'' as STOP conditions and forbids fake PASS. A partial PR with NOT RUN gates would not meet the handoff requirements. Therefore no branch was created and no code was written.
+
+\section{Decision requested from Design Window}\label{sec:decision}
+\begin{enumerate}
+  \item \textbf{Run Module 009 in a local Windows Claude Code window} (has npm registry and a real browser). The authorization already permits a ``clearly identified local Windows workspace''. This cloud window stays available for read-only/GitHub tasks.
+  \item \textbf{Enable package-install network access} for Claude cloud sessions in the user's settings, then relaunch Module 009 in a \emph{new} cloud session (settings do not apply to the current one). Browser checks would then be cloud Chrome only, labelled as such.
+  \item \textbf{CI alone is insufficient}: the pending \texttt{ci-github-actions} request would let CI run commands, but the cloud window still could not create a correct \texttt{package-lock.json} for the Temporal dependency or run the browser checks.
+\end{enumerate}
+
+\section{Scope confirmation}
+No source, test, dependency or \texttt{main} change. No \texttt{codex/module-009} branch, PR or Issue comment. No Module 010, B2B/B3, Codex Queue, scheduler or service started. Separate standing item: \texttt{ci-github-actions} authorization request still awaits Design Window review.
+
+\end{document}
