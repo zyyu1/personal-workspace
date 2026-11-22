@@ -26,44 +26,68 @@ const inject=()=>js(helpers)
 await send('Page.enable');await send('Runtime.enable');await send('Log.enable')
 const nextMonth=(()=>{const date=new Date();date.setUTCMonth(date.getUTCMonth()+1,15);return date.toISOString().slice(0,10)})()
 
+// Focus-restore diagnostics (MODULE_009_FOCUS_DIAGNOSTIC_SCRIPT_REMEDIATION_AUTHORIZATION.md):
+// the script never calls .focus(); it only observes document.activeElement.
+const CYCLES_PER_VIEWPORT=5,FOCUS_TIMEOUT_MS=1000,FOCUS_DELAY_FLAG_MS=250,POLL_MS=25
+const focusCycles=[]
+const focusProbe=`window.__describe=el=>el?{tag:el.tagName.toLowerCase(),id:el.id||null,ariaLabel:el.getAttribute?.('aria-label')??null,connected:el.isConnected}:null;
+window.__armFocusProbe=()=>{window.__expectedInput=document.querySelector('input[aria-label="New assessment title"]');window.__closedAt=undefined;window.__initialFocus=undefined;const inspector=window.__inspector('Assessment inspector');const observer=new MutationObserver(()=>{if(window.__closedAt===undefined&&!inspector.isConnected){window.__closedAt=performance.now();window.__initialFocus=window.__describe(document.activeElement);observer.disconnect()}});observer.observe(document.body,{childList:true,subtree:true});window.__probeObserver=observer;return Boolean(window.__expectedInput&&inspector)};
+window.__runFocusProbe=async(timeoutMs,pollMs)=>{const sleep=ms=>new Promise(r=>setTimeout(r,ms));const closeDeadline=performance.now()+3000;while(window.__closedAt===undefined&&performance.now()<closeDeadline)await sleep(5);if(window.__closedAt===undefined){window.__probeObserver?.disconnect();return{inspectorClosed:false}}
+const expected=window.__expectedInput,t0=window.__closedAt;let latency;while(performance.now()-t0<=timeoutMs){if(document.activeElement===expected&&expected.isConnected){latency=Math.round(performance.now()-t0);break}await sleep(pollMs)}
+return{inspectorClosed:true,initialFocus:window.__initialFocus,initialIsTarget:window.__initialFocus?.ariaLabel==='New assessment title'&&window.__initialFocus?.connected===true,restoredFocus:window.__describe(document.activeElement),restorationLatencyMs:latency??null,timeout:latency===undefined,targetConnected:expected.isConnected,targetIsSameElement:document.activeElement===expected}}`
+
 for(const [width,height] of VIEWPORTS){
   const tag=`${width}x${height}`
   await send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:width<768})
-  await go(`/study/courses/${OFFERING}/exams`);await inject()
+  await go(`/study/courses/${OFFERING}/exams`);await inject();await js(focusProbe)
   await waitFor(`document.body.innerText.toLowerCase().includes('exams & past papers')`,`${tag} exams route`)
   log('route',{viewport:tag,tabActive:await js(`document.querySelector('a[aria-current="page"]')?.textContent`),unknownShown:await js(`document.body.innerText.includes('Unknown date')`),...await js('window.__overflow()')})
   check(!(await js('window.__overflow().overflow')),`${tag} no overflow (list)`,await js('window.__overflow()'))
-  // Create -> auto-open Inspector -> Escape -> focus returns to the create input
-  const title=`Browser exam ${tag}`
-  await js(`window.__set('input[aria-label="New assessment title"]',${JSON.stringify(title)})`);await js(`window.__button('Add assessment').click()`)
-  await waitFor(`window.__inspector('Assessment inspector')`,`${tag} inspector auto-opens`)
-  log('inspector-open',{viewport:tag,focusInside:await js(`window.__inspector('Assessment inspector').contains(document.activeElement)`),rect:await js(`(()=>{const r=window.__inspector('Assessment inspector').getBoundingClientRect();return{x:Math.round(r.x),width:Math.round(r.width),height:Math.round(r.height)}})()`),...await js('window.__overflow()')})
-  check(!(await js('window.__overflow().overflow')),`${tag} no overflow (inspector)`,await js('window.__overflow()'))
-  // DST gap is rejected in the real UI
-  await js(`window.__set('.milestone-form select:nth-of-type(1)','exam')`)
-  await js(`(()=>{const selects=[...document.querySelectorAll('.milestone-form select')];window.__set_el=(el,v)=>{const proto=el instanceof HTMLSelectElement?HTMLSelectElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,v);el.dispatchEvent(new Event(el instanceof HTMLSelectElement?'change':'input',{bubbles:true}))};window.__set_el(selects[1],'exact');return true})()`)
-  await sleep(150)
-  await js(`(()=>{const form=document.querySelector('.milestone-form');window.__set_el(form.querySelector('input[type=date]'),'2026-03-29');window.__set_el(form.querySelector('input[type=time]'),'02:30');window.__set_el(form.querySelector('input[list=exam-zones]'),'Europe/Berlin');const v=[...form.querySelectorAll('select')][2];window.__set_el(v,'user-confirmed');return true})()`)
-  await js(`window.__button('Save milestone').click()`)
-  await waitFor(`document.body.innerText.includes('does not exist in Europe/Berlin')`,`${tag} DST gap rejected in UI`)
-  // Valid exact milestone in next month
-  await js(`(()=>{const form=document.querySelector('.milestone-form');window.__set_el(form.querySelector('input[type=date]'),${JSON.stringify(nextMonth)});window.__set_el(form.querySelector('input[type=time]'),'09:00');return true})()`)
-  await js(`window.__button('Save milestone').click()`)
-  await waitFor(`window.__inspector('Assessment inspector')?.innerText.includes(${JSON.stringify(`${nextMonth} 09:00 (Europe/Berlin)`)})`,`${tag} exact milestone saved`)
-  const assessmentId=await js(`new URLSearchParams(location.search).get('assessment')`)
-  await key('Escape')
-  await waitFor(`!window.__inspector('Assessment inspector')`,`${tag} Escape closes inspector`)
-  const focusLabel=await js(`document.activeElement?.getAttribute('aria-label')`)
-  log('escape-focus',{viewport:tag,focusLabel})
-  check(focusLabel==='New assessment title',`${tag} focus returns to create input`,focusLabel)
+  let assessmentId,firstTitle
+  for(let cycle=1;cycle<=CYCLES_PER_VIEWPORT;cycle++){
+    // Create -> auto-open Inspector -> (cycle 1: DST + milestone checks) -> Escape -> observe focus restore
+    const title=`Browser exam ${tag} #${cycle}`
+    check(!(await js(`Boolean(window.__inspector('Assessment inspector'))`)),`${tag} cycle ${cycle} starts with inspector closed`,'inspector still open')
+    await js(`window.__set('input[aria-label="New assessment title"]',${JSON.stringify(title)})`);await js(`window.__button('Add assessment').click()`)
+    await waitFor(`window.__inspector('Assessment inspector')?.innerText.includes(${JSON.stringify(title)})`,`${tag} cycle ${cycle} inspector auto-opens`)
+    const focusInside=await js(`window.__inspector('Assessment inspector').contains(document.activeElement)`)
+    check(focusInside,`${tag} cycle ${cycle} focus inside inspector`,focusInside)
+    if(cycle===1){
+      firstTitle=title
+      log('inspector-open',{viewport:tag,focusInside,rect:await js(`(()=>{const r=window.__inspector('Assessment inspector').getBoundingClientRect();return{x:Math.round(r.x),width:Math.round(r.width),height:Math.round(r.height)}})()`),...await js('window.__overflow()')})
+      check(!(await js('window.__overflow().overflow')),`${tag} no overflow (inspector)`,await js('window.__overflow()'))
+      // DST gap is rejected in the real UI
+      await js(`(()=>{const selects=[...document.querySelectorAll('.milestone-form select')];window.__set_el=(el,v)=>{const proto=el instanceof HTMLSelectElement?HTMLSelectElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(el,v);el.dispatchEvent(new Event(el instanceof HTMLSelectElement?'change':'input',{bubbles:true}))};window.__set_el(selects[0],'exam');window.__set_el(selects[1],'exact');return true})()`)
+      await waitFor(`document.querySelector('.milestone-form input[type=time]')`,`${tag} exact time field shown`)
+      await js(`(()=>{const form=document.querySelector('.milestone-form');window.__set_el(form.querySelector('input[type=date]'),'2026-03-29');window.__set_el(form.querySelector('input[type=time]'),'02:30');window.__set_el(form.querySelector('input[list=exam-zones]'),'Europe/Berlin');const v=[...form.querySelectorAll('select')][2];window.__set_el(v,'user-confirmed');return true})()`)
+      await js(`window.__button('Save milestone').click()`)
+      await waitFor(`document.body.innerText.includes('does not exist in Europe/Berlin')`,`${tag} DST gap rejected in UI`)
+      await js(`(()=>{const form=document.querySelector('.milestone-form');window.__set_el(form.querySelector('input[type=date]'),${JSON.stringify(nextMonth)});window.__set_el(form.querySelector('input[type=time]'),'09:00');return true})()`)
+      await js(`window.__button('Save milestone').click()`)
+      await waitFor(`window.__inspector('Assessment inspector')?.innerText.includes(${JSON.stringify(`${nextMonth} 09:00 (Europe/Berlin)`)})`,`${tag} exact milestone saved`)
+      await waitFor(`!window.__button('Save milestone')?.disabled`,`${tag} save settled`)
+      assessmentId=await js(`new URLSearchParams(location.search).get('assessment')`)
+    }
+    const armed=await js('window.__armFocusProbe()')
+    check(armed,`${tag} cycle ${cycle} focus probe armed`,armed)
+    await key('Escape')
+    const result=await js(`window.__runFocusProbe(${FOCUS_TIMEOUT_MS},${POLL_MS})`)
+    const delayed=result.restorationLatencyMs!==null&&result.restorationLatencyMs>FOCUS_DELAY_FLAG_MS
+    const row={viewport:tag,cycle,...result,potentialUserVisibleDelay:delayed}
+    focusCycles.push(row);log('focus-cycle',row)
+    check(result.inspectorClosed,`${tag} cycle ${cycle} Escape closes inspector`,result)
+    check(result.inspectorClosed&&!result.timeout&&result.targetIsSameElement&&result.targetConnected,`${tag} cycle ${cycle} focus restored to the original connected create input within ${FOCUS_TIMEOUT_MS} ms`,result)
+    if(delayed)log('FLAG potential user-visible focus delay',{viewport:tag,cycle,restorationLatencyMs:result.restorationLatencyMs,thresholdMs:FOCUS_DELAY_FLAG_MS})
+  }
   // Deep link persisted reload (IndexedDB)
   await go(`/study/courses/${OFFERING}/exams?assessment=${encodeURIComponent(assessmentId)}`);await inject()
-  await waitFor(`window.__inspector('Assessment inspector')?.innerText.includes(${JSON.stringify(title)})`,`${tag} deep link reload`)
+  await waitFor(`window.__inspector('Assessment inspector')?.innerText.includes(${JSON.stringify(firstTitle)})`,`${tag} deep link reload`)
   log('deep-link-reload',{viewport:tag,assessmentId,persisted:await js(`window.__inspector('Assessment inspector')?.innerText.includes(${JSON.stringify(nextMonth)})`)})
-  await key('Escape');await sleep(200)
+  await key('Escape');await waitFor(`!window.__inspector('Assessment inspector')`,`${tag} deep link inspector closes`)
   // Past papers view: empty/permission states are plain text
-  await js(`window.__button('Past Papers').click()`);await sleep(200)
-  log('past-papers-view',{viewport:tag,emptyState:await js(`document.body.innerText.includes('No past papers in this term')`),...await js('window.__overflow()')})
+  await js(`window.__button('Past Papers').click()`)
+  await waitFor(`document.body.innerText.includes('No past papers in this term')`,`${tag} past papers empty state`)
+  log('past-papers-view',{viewport:tag,emptyState:true,...await js('window.__overflow()')})
   check(!(await js('window.__overflow().overflow')),`${tag} no overflow (past papers)`,await js('window.__overflow()'))
   // Missing deep link fallback
   await go(`/study/courses/${OFFERING}/exams?practice=does-not-exist`);await inject()
@@ -82,10 +106,13 @@ await js(`window.__set('select[aria-label="Calendar project"]','${OFFERING}')`);
 await js(`document.querySelector('button[aria-label="Next month"]').click()`);await sleep(300)
 await waitFor(`document.body.innerText.includes('Original: ${nextMonth} 09:00')`,'calendar original local time')
 log('calendar',{examEvents:await js(`[...document.querySelectorAll('.calendar-item')].filter(el=>el.innerText.includes('Browser exam')).length`),text:await js(`[...document.querySelectorAll('.calendar-item')].filter(el=>el.innerText.includes('Browser exam')).map(el=>el.innerText.replace(/\\s+/g,' ').slice(0,160))`)})
-check(await js(`[...document.querySelectorAll('.calendar-item')].filter(el=>el.innerText.includes('Browser exam 1440x900')).length`)===1,'calendar one event per exam','count mismatch')
+for(const [width,height] of VIEWPORTS){const count=await js(`[...document.querySelectorAll('.calendar-item')].filter(el=>el.innerText.includes('Browser exam ${width}x${height} #1')).length`);check(count===1,`calendar one event per exam (${width}x${height} #1)`,count)}
 
 log('console-errors',{count:consoleErrors.length,errors:consoleErrors.slice(0,10),reportedNotFailed:{reason:'index.html declares no favicon; Chrome requests /favicon.ico by default (pre-existing, not app code)',entries:[...new Set(knownBrowserDefaults)]}})
 check(consoleErrors.length===0,'no console errors',consoleErrors.slice(0,10))
+const latencies=focusCycles.map(row=>row.restorationLatencyMs).filter(value=>value!==null)
+log('focus-summary',{cycles:focusCycles.length,restored:focusCycles.filter(row=>!row.timeout&&row.targetIsSameElement).length,timeouts:focusCycles.filter(row=>row.timeout).length,initialNotYetOnTarget:focusCycles.filter(row=>!row.initialIsTarget).length,delayedOver250ms:focusCycles.filter(row=>row.potentialUserVisibleDelay).map(row=>`${row.viewport}#${row.cycle}:${row.restorationLatencyMs}ms`),maxLatencyMs:latencies.length?Math.max(...latencies):null,latencies:focusCycles.map(row=>`${row.viewport}#${row.cycle}:${row.restorationLatencyMs??'timeout'}`)})
+check(focusCycles.length===VIEWPORTS.length*CYCLES_PER_VIEWPORT,'all 15 focus cycles executed',focusCycles.length)
 log('summary',{checks:evidence.length,failures:failures.length,environment:'GitHub-hosted ubuntu-latest, headless Google Chrome, vite preview (cloud only; not Windows host validation)'})
 socket.close()
 process.exit(failures.length?1:0)
