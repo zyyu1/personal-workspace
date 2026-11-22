@@ -1,0 +1,61 @@
+% Module 009 -- Cloud reconciliation run (Run 03) report to Design Window
+% Branch: module-009-run-reports (evidence only)
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.1cm]{geometry}
+\usepackage{booktabs,tabularx,hyperref,xcolor,enumitem}
+\newcommand{\sha}[1]{\texttt{\small #1}}
+\newcommand{\PASS}{\textcolor{green!50!black}{\textbf{PASS}}}
+\newcommand{\FAIL}{\textcolor{red!70!black}{\textbf{FAIL}}}
+\newcommand{\STOP}{\textcolor{red!70!black}{\textbf{STOP}}}
+\title{Module 009 --- Cloud Reconciliation Run 03\\Merge Done, Exact-Head CI \FAIL{} (Intermittent Browser Check) --- \STOP}
+\author{Claude Code Cloud Development / Execution Window}
+\date{2026-11-22 (Europe/Berlin)}
+\begin{document}
+\maketitle
+\section*{Summary}
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+Authority & \texttt{MODULE\_009\_CLOUD\_CONFLICT\_RECONCILIATION\_AUTHORIZATION.md} (main \sha{ee7a65e}, recorded \sha{37790dd}) \\
+Reconciliation & \PASS{} --- non-force merge commit \sha{b9fd7637ab66ef1e37afc43fb1968e0b8e26670c}, parents \sha{845c825} (branch) + \sha{37790dd} (main); pushed fast-forward \\
+Exact-head CI & \FAIL{} --- \href{https://github.com/zyyu1/personal-workspace/actions/runs/45049036051}{run 45049036051}, tested SHA \sha{b9fd763}; only the browser-smoke step failed (1 of 17 checks) \\
+QA handoff & \textbf{not published} (authorization requires CI fully passing first) \\
+PR \#20 & OPEN, DRAFT, unmerged, head \sha{b9fd763}, \texttt{mergeable\_state=unstable} (failing check) \\
+\bottomrule
+\end{tabularx}
+
+\section{Read-only preflight (all \PASS)}
+Clean cloud clone; origin \texttt{zyyu1/personal-workspace}; main \sha{37790dd}; PR \#20 OPEN/DRAFT/UNMERGED with head exactly \sha{845c825}; Issue \#19 OPEN; main changes since branch base \sha{b6140bd} were docs only (two new 009 authority files + \texttt{STATUS.md}); 007 \sha{cd2c714} and 008 \sha{48558a8} in main ancestry; no other active CI run.
+
+\section{Merge}
+Only conflict: \texttt{docs/handoffs/009/STATUS.md}. Resolved additively in time order: main Run01 disposition + PR\#20 follow-up (17:47--17:48) $\to$ branch implementation section (18:08; heading relabelled as the \sha{845c825} snapshot, body unchanged) $\to$ main Run02 decision (18:18) $\to$ new dated \emph{Current resolution} section. Scripted check: every line of both sides is present. No change outside \texttt{docs/handoffs/009/}; \texttt{src/}, tests, workflow, tools and lockfile identical to the previously green head \sha{ed1c409}.
+
+\section{CI result at exact head \sha{b9fd763}}
+\begin{tabularx}{\textwidth}{@{}Xl@{}}
+\toprule
+Step & Result \\
+\midrule
+npm ci, typecheck & \PASS \\
+lint & \PASS{} --- 0 errors, 12 pre-existing Research warnings \\
+build & \PASS \\
+tests & \PASS{} --- 12 files, 186/186 \\
+\texttt{git diff --check} vs PR base & \PASS \\
+browser smoke (cloud Chrome) & \FAIL{} --- 16/17 checks pass \\
+\bottomrule
+\end{tabularx}
+
+\paragraph{The failing check.} At 1440$\times$900, after creating an assessment (inspector auto-opens, focus inside: pass) and pressing Escape (inspector closes: pass), \texttt{document.activeElement} had no \texttt{aria-label} (expected \emph{New assessment title}). The same check \textbf{passed} at 1024$\times$768 and 390$\times$844 in this run, and at all three sizes in run 45047487262 on \sha{ed1c409} with \textbf{identical application and script code}. No overflow, no console errors (default \texttt{/favicon.ico} 404 reported separately), DST gap rejection, deep-link reload and one calendar event per exam all passed.
+
+\paragraph{Assessment.} Intermittent. Two possible causes that this window cannot separate without changing code or re-running: (a) a timing race in the smoke script (reads focus immediately after the inspector disappears); (b) a real, occasional focus-restoration race in the app (row 29 territory). It was \textbf{not} re-run, so that a retry would not hide (b).
+
+\section{Decision requested}
+\begin{enumerate}
+  \item Authorize a disclosed re-run of the same exact-head CI as a flakiness diagnostic (reported as such, with both results), and say whether a pass on re-run can be used for the QA handoff.
+  \item Or publish the Review Only QA request now with this failure listed as a known open finding for independent QA (row 29 stays PARTIAL).
+  \item Or issue a specific remediation decision (script wait/assert change or app focus fix), which this exception does not cover.
+\end{enumerate}
+
+\section{Scope confirmation}
+No source/test/workflow edit, no force push/rebase/reset, no CI re-run, no PR/Issue comment, PR \#20 kept DRAFT and unmerged, no QA claim. No Module 010, B2B/B3, Codex Queue, scheduler or service.
+\end{document}
