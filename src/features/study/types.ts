@@ -7,6 +7,12 @@ export type PermissionState='session-authorized'|'permission-required'|'offline'
 export type ImportStatus='preview'|'completed'|'partial'|'failed'|'cancelled'
 export type MaterialClassification='lectures'|'exercises'|'tutorials'|'past-papers'|'labs'|'notes'|'administrative'|'other'
 export type StudyProgressState='not-started'|'studying'|'studied'|'reviewed'
+export type StudyProgressTargetType='resource'|'learning-unit'|'exercise-item'
+export type LearningStudyState='not_started'|'in_progress'|'studied'
+export type MasteryState='unassessed'|'needs_review'|'practicing'|'confident'
+export type ExerciseSolveState='not_started'|'in_progress'|'blocked'|'solved'
+export type ExerciseOutcome='unknown'|'incorrect'|'partial'|'correct'
+export type ExerciseSetKind='exercise'|'kgu'|'tutorial'|'other'
 
 export interface Course{id:string;title:string;code?:string;department?:string;defaultTags:string[];demo?:boolean}
 export interface CourseOffering{id:string;courseId:string;term:string;enrollmentStatus:EnrollmentStatus;lecturer?:string;ects?:number;courseUrl?:string;progressStatus?:string;demo?:boolean}
@@ -15,8 +21,14 @@ export interface ManifestEntry{relativePath:string;entryType:'file'|'directory';
 export interface CourseMaterialEntry extends ManifestEntry{id:string;sourceId:string;resourceId?:string;status:'available'|'missing'|'rejected';manualClassification?:boolean}
 export interface CourseMaterialImport{id:string;sourceId:string;status:ImportStatus;startedAt:string;completedAt?:string;totals:{discovered:number;accepted:number;rejected:number};failures:Array<{path?:string;reason:string}>;manifestVersion:1;initiatedBy:'user'}
 export interface CourseSection{id:string;offeringId:string;type:MaterialClassification;label:string;order:number}
-export interface CourseStudyProgress{id:string;offeringId:string;resourceId?:string;sectionId?:string;state:StudyProgressState;updatedAt:string;noteId?:string}
+export interface CourseLearningUnit{id:string;courseOfferingId:string;parentUnitId?:string;title:string;code?:string;order:number;description?:string;includeInCoverage:boolean;resourceIds:string[];archivedAt?:string;createdAt:string;updatedAt:string}
+export interface CourseExerciseSet{id:string;courseOfferingId:string;title:string;setCode?:string;kind:ExerciseSetKind;learningUnitId?:string;sourceResourceIds:string[];status:'active'|'archived';order:number;createdAt:string;updatedAt:string}
+export interface CourseExerciseItem{id:string;courseOfferingId:string;setId:string;itemCode:string;normalizedCode:string;title?:string;learningUnitId?:string;sourcePointer?:string;sourceResourceIds:string[];order:number;includeInCoverage:boolean;archivedAt?:string;createdAt:string;updatedAt:string}
+export interface CourseExerciseAttempt{id:string;exerciseItemId:string;courseOfferingId:string;attemptedAt:string;outcome:ExerciseOutcome;notes?:string;mistakeTags:string[];difficulty?:'easy'|'medium'|'hard';noteId?:string;createdAt:string;revisedAt?:string}
+export interface StudyEvidenceLink{id:string;courseOfferingId:string;targetType:'learning-unit'|'exercise-set'|'exercise-item';targetId:string;resourceId?:string;noteId?:string;taskId?:string;relationRole:string;createdAt:string}
+export interface CourseStudyProgress{id:string;offeringId:string;targetType?:StudyProgressTargetType;targetId?:string;resourceId?:string;sectionId?:string;state?:StudyProgressState;studyState?:LearningStudyState;masteryState?:MasteryState;solveState?:ExerciseSolveState;needsReview?:boolean;lastStudiedAt?:string;lastReviewedAt?:string;reviewOn?:string;updatedAt:string;noteId?:string}
 export interface CourseAssessment{id:string;offeringId:string;assessmentType:'exam'|'quiz'|'testat'|'report'|'assignment';title:string;officialDateTime?:string;originalTimezone?:string;provenance?:string;registrationStatus?:string;verified:boolean}
-export interface StudyState{courses:Course[];offerings:CourseOffering[];sources:CourseMaterialSource[];imports:CourseMaterialImport[];entries:CourseMaterialEntry[];sections:CourseSection[];progress:CourseStudyProgress[];assessments:CourseAssessment[]}
-export interface CourseOfferingView{course:Course;offering:CourseOffering;sources:CourseMaterialSource[];entries:CourseMaterialEntry[];sections:CourseSection[];progress:CourseStudyProgress[];assessments:CourseAssessment[];resources:WorkspaceResource[];tasks:ResearchTask[];timeEntries:TimeEntry[]}
+export interface StudyState{courses:Course[];offerings:CourseOffering[];sources:CourseMaterialSource[];imports:CourseMaterialImport[];entries:CourseMaterialEntry[];sections:CourseSection[];progress:CourseStudyProgress[];assessments:CourseAssessment[];learningUnits:CourseLearningUnit[];exerciseSets:CourseExerciseSet[];exerciseItems:CourseExerciseItem[];attempts:CourseExerciseAttempt[];evidenceLinks:StudyEvidenceLink[]}
+export interface CourseOfferingView{course:Course;offering:CourseOffering;sources:CourseMaterialSource[];entries:CourseMaterialEntry[];sections:CourseSection[];progress:CourseStudyProgress[];assessments:CourseAssessment[];learningUnits:CourseLearningUnit[];exerciseSets:CourseExerciseSet[];exerciseItems:CourseExerciseItem[];attempts:CourseExerciseAttempt[];evidenceLinks:StudyEvidenceLink[];resources:WorkspaceResource[];tasks:ResearchTask[];timeEntries:TimeEntry[]}
+export interface CourseProgressQuery{offeringId:string;unit:{tracked:number;studied:number;confident:number;needsReview:number;percentage?:number};exercise:{tracked:number;attempted:number;solved:number;toRetry:number;attemptPercentage?:number;solvedPercentage?:number};reviewCount:number}
 export interface ManifestPreview{sourceLabel:string;sourceFingerprint:string;sourceKind:MaterialSourceKind;entries:ManifestEntry[];failures:Array<{path?:string;reason:string}>;totals:{discovered:number;accepted:number;rejected:number;uncompressedBytes:number};canConfirm:boolean}

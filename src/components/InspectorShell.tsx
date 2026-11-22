@@ -3,11 +3,12 @@ import { AlertCircle, Inbox, LoaderCircle, X } from 'lucide-react'
 
 type InspectorState='ready'|'loading'|'error'|'empty'
 
-export function InspectorShell({title,eyebrow,onClose,children,className='',label='Context inspector',state='ready',message,full=false}:{title:string;eyebrow?:ReactNode;onClose:()=>void;children?:ReactNode;className?:string;label?:string;state?:InspectorState;message?:string;full?:boolean}){
-  const titleId=useId(),panelRef=useRef<HTMLElement>(null),returnFocus=useRef<HTMLElement|null>(null),onCloseRef=useRef(onClose)
+export function InspectorShell({title,eyebrow,onClose,children,className='',label='Context inspector',state='ready',message,full=false,returnFocusTo}:{title:string;eyebrow?:ReactNode;onClose:()=>void;children?:ReactNode;className?:string;label?:string;state?:InspectorState;message?:string;full?:boolean;returnFocusTo?:HTMLElement|null}){
+  const titleId=useId(),panelRef=useRef<HTMLElement>(null),returnFocus=useRef<HTMLElement|null>(returnFocusTo??null),onCloseRef=useRef(onClose)
   onCloseRef.current=onClose
+  useEffect(()=>{if(returnFocusTo)returnFocus.current=returnFocusTo},[returnFocusTo])
   useEffect(()=>{
-    returnFocus.current=document.activeElement instanceof HTMLElement?document.activeElement:null
+    returnFocus.current??=document.activeElement instanceof HTMLElement?document.activeElement:null
     const panel=panelRef.current
     const first=panel?.querySelector<HTMLElement>('button:not([disabled]),a[href],input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')
     first?.focus()
