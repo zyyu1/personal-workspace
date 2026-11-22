@@ -84,6 +84,38 @@ export const activeMilestones=(milestones:ExamMilestone[],assessmentId:string)=>
 /** A milestone is calendar-eligible only when dated, active, confirmed/verified and its assessment is active. */
 export const isCalendarEligible=(milestone:ExamMilestone,assessment?:CourseAssessment)=>Boolean(assessment&&lifecycleOf(assessment)==='active'&&milestone.status==='active'&&milestone.datePrecision!=='unknown'&&milestone.localDate&&milestone.verificationStatus!=='unverified')
 
+/**
+ * F-01 effective exam-date resolver (read-only, derived from existing v3 history; no persisted state).
+ * Ruling: F01_LEGACY_VERIFIED_CALENDAR_PRESERVATION_RULING.md — confirmation is the replacement threshold.
+ * Replays the assessment's `exam` milestones in order (append-only creation order; cancellations at their
+ * `updatedAt`), starting from verified 007 legacy evidence:
+ *  - a dated `user-confirmed` / `source-verified` milestone becomes the effective date and clears any pending proposal;
+ *  - an `unverified` or `unknown` milestone only becomes the pending proposal (never revokes confirmed evidence);
+ *  - cancelling the effective confirmed milestone leaves NO effective date (no resurrection of older evidence);
+ *  - cancelling the pending proposal clears it and keeps the effective date.
+ * Calendar, Exams and Overview all read this one result.
+ */
+export type EffectiveExamEvidence={source:'legacy';officialDateTime:string;timezone?:string;provenance?:string}|{source:'milestone';milestone:ExamMilestone}
+export interface ExamDateResolution{assessmentId:string;assessmentActive:boolean;effective?:EffectiveExamEvidence;pending?:ExamMilestone;effectiveWithdrawn:boolean;reviewNeeded:boolean;onCalendar:boolean}
+const isConfirmedDated=(row:ExamMilestone)=>(row.verificationStatus==='user-confirmed'||row.verificationStatus==='source-verified'||row.verificationStatus==='legacy-verified')&&row.datePrecision!=='unknown'&&Boolean(row.localDate)
+export function resolveExamDate(assessment:CourseAssessment,milestones:ExamMilestone[]):ExamDateResolution{
+  const own=milestones.map((row,index)=>({row,index})).filter(({row})=>row.assessmentId===assessment.id&&row.offeringId===assessment.offeringId&&row.kind==='exam')
+  type Step={time:string;order:number;kind:'create'|'cancel';row:ExamMilestone}
+  const steps:Step[]=own.flatMap(({row,index})=>[{time:row.createdAt,order:index*2,kind:'create' as const,row},...(row.status==='cancelled'?[{time:row.updatedAt,order:index*2+1,kind:'cancel' as const,row}]:[])])
+  steps.sort((a,b)=>a.time.localeCompare(b.time)||a.order-b.order)
+  let effective:EffectiveExamEvidence|undefined=assessment.verified&&assessment.officialDateTime&&!Number.isNaN(Date.parse(assessment.officialDateTime))?{source:'legacy',officialDateTime:assessment.officialDateTime,timezone:assessment.originalTimezone,provenance:assessment.provenance}:undefined
+  let pending:ExamMilestone|undefined,effectiveWithdrawn=false
+  for(const step of steps){
+    if(step.kind==='create'){if(isConfirmedDated(step.row)){effective={source:'milestone',milestone:step.row};pending=undefined;effectiveWithdrawn=false}else pending=step.row;continue}
+    if(effective?.source==='milestone'&&effective.milestone.id===step.row.id){effective=undefined;effectiveWithdrawn=true}
+    if(pending?.id===step.row.id)pending=undefined
+  }
+  const assessmentActive=lifecycleOf(assessment)==='active'
+  return{assessmentId:assessment.id,assessmentActive,effective,pending,effectiveWithdrawn,reviewNeeded:Boolean(effective&&pending),onCalendar:assessmentActive&&Boolean(effective)}
+}
+/** Civil date of the effective evidence (original local date; never re-zoned). */
+export const effectiveExamLocalDate=(effective?:EffectiveExamEvidence)=>!effective?undefined:effective.source==='milestone'?effective.milestone.localDate:effective.officialDateTime.slice(0,10)
+
 export const StudyExamService={
   async getSnapshot(offeringId:string){
     const state=await StudyRepository.getState(),offering=state.offerings.find(row=>row.id===offeringId)
@@ -251,8 +283,8 @@ export const StudyExamService={
   async summary(offeringId:string,today=viewerToday()){
     const snapshot=await this.getSnapshot(offeringId);if(!snapshot)return undefined
     const active=snapshot.assessments.filter(row=>lifecycleOf(row)==='active')
-    const rows=active.map(assessment=>{const exam=activeMilestones(snapshot.milestones,assessment.id).find(row=>row.kind==='exam');return{assessment,exam,registration:registrationOf(assessment).status,legacy:!exam&&assessment.verified&&assessment.officialDateTime?assessment.officialDateTime:undefined}})
-    const upcoming=rows.filter(row=>!row.exam?.localDate||row.exam.localDate>=today).sort((a,b)=>(a.exam?.localDate??a.legacy?.slice(0,10)??'9999').localeCompare(b.exam?.localDate??b.legacy?.slice(0,10)??'9999'))
+    const rows=active.map(assessment=>{const resolution=resolveExamDate(assessment,snapshot.milestones);return{assessment,resolution,registration:registrationOf(assessment).status,sortDate:effectiveExamLocalDate(resolution.effective)??resolution.pending?.localDate}})
+    const upcoming=rows.filter(row=>!row.sortDate||row.sortDate>=today).sort((a,b)=>(a.sortDate??'9999').localeCompare(b.sortDate??'9999'))
     const deadlines=snapshot.milestones.filter(row=>row.status==='active'&&row.kind!=='exam'&&row.localDate&&row.localDate>=today&&active.some(item=>item.id===row.assessmentId)).sort((a,b)=>a.localDate!.localeCompare(b.localDate!))
     return{upcoming,deadlines,cancelled:snapshot.assessments.filter(row=>lifecycleOf(row)==='cancelled').length,papers:snapshot.linkedPapers.filter(row=>!row.archivedAt).length,practices:snapshot.practices.length}
   },

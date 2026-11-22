@@ -49,10 +49,13 @@ const registrationText={unknown:'Registration unknown',not_registered:'Not regis
 const milestoneText={'registration-open':'Registration opens','registration-close':'Registration closes','withdrawal-close':'Withdrawal deadline',exam:'Exam','grade-release':'Grade release'} as const
 /** Derived from the same canonical Assessment/Milestone records as the Exams tab; no separate countdown state. */
 function ExamSummaryCard({summary,offeringId}:{summary?:Awaited<ReturnType<typeof StudyExamService.summary>>;offeringId:string}){
-  const next=summary?.upcoming[0],deadline=summary?.deadlines[0]
-  const examText=next?.exam?next.exam.datePrecision==='unknown'?{label:'Date unknown',detail:'No confirmed date yet'}:describeExamDate(next.exam):next?.legacy?{label:next.legacy,detail:'Legacy verified record'}:next?{label:'Date unknown',detail:'No confirmed date yet'}:undefined
+  const next=summary?.upcoming[0],deadline=summary?.deadlines[0],resolution=next?.resolution,effective=resolution?.effective,pending=resolution?.pending
+  // F-01: same shared resolution as Calendar and Exams — never "not on Calendar" while confirmed evidence is projected.
+  const examText=effective?effective.source==='legacy'?{label:effective.officialDateTime,detail:`Legacy record · ${effective.timezone??'timezone not recorded'}`}:describeExamDate(effective.milestone):pending&&pending.datePrecision!=='unknown'&&pending.localDate?describeExamDate(pending):next?{label:'Date unknown',detail:'No confirmed date yet'}:undefined
+  const status=effective?`${effective.source==='legacy'?'Verified (legacy)':effective.milestone.verificationStatus.replace('-',' ')} · on Calendar`:pending?'Tentative · not on Calendar':'Not verified · not placed on Calendar'
   return <section className="card"><div className="card-head"><div><span className="eyebrow">Upcoming assessments</span><h2>{next?next.assessment.title:'No upcoming assessment'}</h2></div><CalendarDays size={18}/></div>
-    {next&&examText?<div className="assessment-row"><strong>{examText.label}</strong><span>{examText.detail}</span><small>{next.exam?next.exam.verificationStatus==='unverified'?'Tentative · not on Calendar':next.exam.verificationStatus.replace('-',' '):next.legacy?'Verified (legacy)':'Not verified · not placed on Calendar'} · {registrationText[next.registration]}</small></div>:<p className="empty-copy">No active assessments recorded.</p>}
+    {next&&examText?<div className="assessment-row"><strong>{examText.label}</strong><span>{examText.detail}</span><small>{status} · {registrationText[next.registration]}</small></div>:<p className="empty-copy">No active assessments recorded.</p>}
+    {resolution?.reviewNeeded&&pending&&<p className="exam-review-warning" role="note"><strong>Reconfirmation needed.</strong> Newer tentative date: {pending.datePrecision==='unknown'||!pending.localDate?'date unknown':describeExamDate(pending).label} — not on Calendar. Check both dates in Exams.</p>}
     {deadline&&<p className="helper">Next deadline: {milestoneText[deadline.kind]} · {describeExamDate(deadline).label}</p>}
     {summary&&summary.upcoming.length>1&&<p className="helper">{summary.upcoming.length-1} more upcoming</p>}
     <p className="helper">{summary?.papers??0} past paper(s) · {summary?.practices??0} practice session(s){summary?.cancelled?` · ${summary.cancelled} cancelled`:''}</p>

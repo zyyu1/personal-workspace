@@ -9,9 +9,10 @@ import { TimeEntryService } from '../../services/timeEntryService'
 import { WorkspaceResumeService } from '../../services/workspaceResumeService'
 import { StudyCourseService, StudyRepository } from './services/studyCourseService'
 import { StudyLearningService } from './services/studyLearningService'
-import { StudyExamService, canonicalExamTaskId, practicePercentage } from './services/studyExamService'
+import { StudyExamService, canonicalExamTaskId, practicePercentage, resolveExamDate } from './services/studyExamService'
 import { candidateInstants, instantToZoned, normalizeExamDate, zonedToInstant } from './services/examDates'
 import { CourseWorkspace } from './components/CourseWorkspace'
+import { GlobalCalendarPage } from '../../components/GlobalCalendarPage'
 import type { StudyState } from './types'
 
 const offeringId='offering-system-theory-ws26'
@@ -342,5 +343,137 @@ describe('Module 009 Exams UI (rows 2, 5, 29)',()=>{
     expect(await screen.findByRole('heading',{name:'Signals final'})).toBeInTheDocument()
     expect(screen.getByText('2099-02-10')).toBeInTheDocument();expect(screen.getByText('Date known, time unknown')).toBeInTheDocument()
     expect(screen.getByText('1 more upcoming')).toBeInTheDocument()
+  })
+})
+
+describe('Module 009 F-01 Revision 01 — confirmed exam Calendar evidence vs tentative corrections',()=>{
+  const LEGACY_ID='assessment-legacy',examItems=async(projectId=offeringId)=>(await GlobalCalendarService.query({projectId})).filter(row=>row.sourceType==='assessment-deadline'&&row.canonicalSourceId!=='assessment-system-theory-exam')
+  const addLegacy=async(overrides:Partial<typeof legacyAssessment>={})=>{const state=await StudyRepository.getState();await StudyRepository.replace({...state,assessments:[...state.assessments,{...legacyAssessment,...overrides}]})}
+  const tentative=(values:Partial<Parameters<typeof StudyExamService.setMilestone>[2]>={})=>StudyExamService.setMilestone(offeringId,LEGACY_ID,{kind:'exam',datePrecision:'date-only',localDate:'2027-03-01',verificationStatus:'unverified',...values})
+  const legacyItem={id:'calendar-assessment:assessment-legacy',canonicalSourceId:LEGACY_ID,sourceType:'assessment-deadline',projectId:offeringId,date:'2027-02-15',start:legacyAssessment.officialDateTime,end:legacyAssessment.officialDateTime,timezone:'Europe/Berlin',verification:'verified',precision:'exact',sourceUrl:'https://example.org/exam'}
+  const legacyUnchanged=async()=>expect((await StudyRepository.getState()).assessments.find(row=>row.id===LEGACY_ID)).toMatchObject(legacyAssessment)
+
+  it('F01-01 legacy verified exam without milestones keeps exactly one original event',async()=>{
+    await addLegacy()
+    const items=await examItems();expect(items).toHaveLength(1);expect(items[0]).toMatchObject({...legacyItem,route:`/study/courses/${offeringId}/overview`});expect(items[0].reviewNeeded).toBeUndefined()
+  })
+  it('F01-02 unverified date-only proposal keeps the old event and flags reconfirmation',async()=>{
+    await addLegacy();await tentative()
+    const items=await examItems();expect(items).toHaveLength(1)
+    expect(items[0]).toMatchObject({...legacyItem,reviewNeeded:true,route:`/study/courses/${offeringId}/exams?assessment=${LEGACY_ID}`});expect(items[0].pendingProposal).toBe('2027-03-01 · date-only · unverified')
+    expect((await GlobalCalendarService.query({projectId:offeringId})).some(row=>row.date==='2027-03-01')).toBe(false);await legacyUnchanged()
+  })
+  it('F01-03 unverified exact proposal keeps the old event with its original timezone, no promotion',async()=>{
+    await addLegacy();await tentative({datePrecision:'exact',localDate:'2027-03-02',localTime:'10:00',timezone:'Europe/London'})
+    const items=await examItems();expect(items).toHaveLength(1);expect(items[0]).toMatchObject({...legacyItem,reviewNeeded:true,verification:'verified'})
+    expect(items[0].pendingProposal).toBe('2027-03-02 10:00 Europe/London · exact · unverified')
+  })
+  it('F01-04 unknown proposal keeps the old event and invents no time',async()=>{
+    await addLegacy();await StudyExamService.setMilestone(offeringId,LEGACY_ID,{kind:'exam',datePrecision:'unknown',verificationStatus:'unverified'})
+    const items=await examItems();expect(items).toHaveLength(1);expect(items[0]).toMatchObject({...legacyItem,reviewNeeded:true,pendingProposal:'date unknown · unknown · unverified'})
+  })
+  it('F01-05 user-confirmed date-only replacement gives exactly one all-day event; legacy stays readable',async()=>{
+    await addLegacy();await tentative({localDate:'2027-02-20',verificationStatus:'user-confirmed'})
+    const items=await examItems();expect(items).toHaveLength(1)
+    expect(items[0]).toMatchObject({id:'calendar-assessment:assessment-legacy',canonicalSourceId:LEGACY_ID,date:'2027-02-20',precision:'date-only',verification:'user-confirmed',start:undefined,end:undefined})
+    expect(items[0].reviewNeeded).toBeUndefined();await legacyUnchanged()
+  })
+  it('F01-06 source-verified exact replacement gives exactly one exact event with local time, zone and instant',async()=>{
+    await addLegacy();await tentative({datePrecision:'exact',localDate:'2027-02-16',localTime:'09:00',timezone:'Europe/Berlin',verificationStatus:'source-verified',sourceUrl:'https://example.org/new'})
+    const items=await examItems();expect(items).toHaveLength(1)
+    expect(items[0]).toMatchObject({date:'2027-02-16',start:'2027-02-16T08:00:00.000Z',timezone:'Europe/Berlin',originalLocal:'2027-02-16 09:00',verification:'source-verified',sourceUrl:'https://example.org/new'});await legacyUnchanged()
+  })
+  it('F01-07 without previously confirmed evidence, tentative exact/date-only/unknown create no exam event',async()=>{
+    const ids:string[]=[]
+    for(const values of [{datePrecision:'exact' as const,localDate:'2027-03-01',localTime:'10:00',timezone:'Europe/Berlin'},{datePrecision:'date-only' as const,localDate:'2027-03-02'},{datePrecision:'unknown' as const}]){const assessment=await StudyExamService.createAssessment(offeringId,{title:`T ${values.datePrecision}`,assessmentType:'exam'});ids.push(assessment.id);await StudyExamService.setMilestone(offeringId,assessment.id,{kind:'exam',verificationStatus:'unverified',...values})}
+    expect((await examItems()).filter(row=>ids.includes(row.canonicalSourceId))).toEqual([])
+  })
+  it('F01-08 cancelling the pending proposal clears the warning and keeps the old event unchanged',async()=>{
+    await addLegacy();const pending=await tentative();await StudyExamService.cancelMilestone(offeringId,pending.id)
+    const items=await examItems();expect(items).toHaveLength(1);expect(items[0]).toMatchObject(legacyItem);expect(items[0].reviewNeeded).toBeUndefined()
+    expect((await StudyExamService.getSnapshot(offeringId))!.milestones.find(row=>row.id===pending.id)?.status).toBe('cancelled');await legacyUnchanged()
+  })
+  it('F01-09 cancelling or archiving the assessment removes the exam event and keeps all evidence',async()=>{
+    await addLegacy();await tentative()
+    await StudyExamService.setAssessmentLifecycle(offeringId,LEGACY_ID,'cancelled');expect(await examItems()).toEqual([])
+    await StudyExamService.setAssessmentLifecycle(offeringId,LEGACY_ID,'archived');expect(await examItems()).toEqual([])
+    const confirmed=await StudyExamService.createAssessment(offeringId,{title:'Confirmed',assessmentType:'exam'});await StudyExamService.setMilestone(offeringId,confirmed.id,examDate('2027-02-20'))
+    await StudyExamService.setAssessmentLifecycle(offeringId,confirmed.id,'archived');expect(await examItems()).toEqual([])
+    const snapshot=(await StudyExamService.getSnapshot(offeringId))!
+    expect(snapshot.milestones.filter(row=>row.assessmentId===LEGACY_ID)).toHaveLength(1);expect(snapshot.milestones.filter(row=>row.assessmentId===confirmed.id)).toHaveLength(1)
+    expect((await StudyRepository.getState()).assessments.find(row=>row.id===LEGACY_ID)).toMatchObject({...legacyAssessment,lifecycle:'archived'})
+  })
+  it('F01-10 a later unverified proposal keeps the last confirmed milestone, not the obsolete legacy date',async()=>{
+    await addLegacy();const confirmed=await tentative({localDate:'2027-02-20',verificationStatus:'user-confirmed'});await tentative({localDate:'2027-03-01'})
+    const items=await examItems();expect(items).toHaveLength(1)
+    expect(items[0]).toMatchObject({date:'2027-02-20',precision:'date-only',verification:'user-confirmed',reviewNeeded:true,pendingProposal:'2027-03-01 · date-only · unverified'})
+    const snapshot=(await StudyExamService.getSnapshot(offeringId))!,resolution=resolveExamDate(snapshot.assessments.find(row=>row.id===LEGACY_ID)!,snapshot.milestones)
+    expect(resolution.effective).toMatchObject({source:'milestone',milestone:{id:confirmed.id}});expect(snapshot.milestones.find(row=>row.id===confirmed.id)?.status).toBe('superseded')
+  })
+  it('F01-11 a newer confirmed replacement wins; cancelling it resurrects neither the older confirmation nor legacy',async()=>{
+    await addLegacy();await tentative({localDate:'2027-02-20',verificationStatus:'user-confirmed'});const latest=await tentative({localDate:'2027-02-27',verificationStatus:'source-verified',sourceNote:'Faculty notice'})
+    let items=await examItems();expect(items).toHaveLength(1);expect(items[0]).toMatchObject({date:'2027-02-27',verification:'source-verified'})
+    await StudyExamService.cancelMilestone(offeringId,latest.id)
+    items=await examItems();expect(items).toEqual([])
+    const snapshot=(await StudyExamService.getSnapshot(offeringId))!,resolution=resolveExamDate(snapshot.assessments.find(row=>row.id===LEGACY_ID)!,snapshot.milestones)
+    expect(resolution).toMatchObject({effectiveWithdrawn:true,onCalendar:false});expect(resolution.effective).toBeUndefined();await legacyUnchanged()
+  })
+  it('F01-12 identity is stable after reload, never leaks across offerings, and same-day records stay one event',async()=>{
+    await addLegacy();await tentative();await tentative({localDate:'2027-03-01'})
+    const before=await examItems();StudyCourseService.invalidate();const after=await examItems()
+    expect(after).toEqual(before);expect(after).toHaveLength(1);expect(after[0]).toMatchObject({id:'calendar-assessment:assessment-legacy',reviewNeeded:true})
+    const other=await StudyCourseService.createTermOffering('course-system-theory',{term:'Summer 2027',enrollmentStatus:'active'})
+    const otherAssessment=await StudyExamService.createAssessment(other.id,{title:'SS exam',assessmentType:'exam'});await StudyExamService.setMilestone(other.id,otherAssessment.id,examDate('2027-02-15'))
+    await expect(StudyExamService.setMilestone(other.id,LEGACY_ID,examDate('2027-02-15'))).rejects.toThrow(/not found/)
+    expect((await examItems(other.id)).map(row=>row.canonicalSourceId)).toEqual([otherAssessment.id])
+    expect((await examItems()).map(row=>row.canonicalSourceId)).toEqual([LEGACY_ID])
+    await tentative({localDate:'2027-03-01',verificationStatus:'user-confirmed'});await tentative({localDate:'2027-03-01',verificationStatus:'source-verified',sourceNote:'same day'})
+    const sameDay=await examItems();expect(sameDay).toHaveLength(1);expect(sameDay[0]).toMatchObject({date:'2027-03-01',verification:'source-verified'})
+  })
+
+  describe('F-01 shared UX consistency (Exams / Overview / Calendar)',()=>{
+    const futureLegacy={officialDateTime:'2099-02-15T09:00:00+01:00'}
+    it('Exams card and inspector show both dates, the projected one, and an accessible warning',async()=>{
+      await addLegacy(futureLegacy);await tentative({localDate:'2099-03-01'})
+      render(<MemoryRouter initialEntries={[`/study/courses/${offeringId}/exams`]}><CourseWorkspace offeringId={offeringId} section="exams" onStartTimer={()=>undefined}/></MemoryRouter>)
+      const card=await screen.findByRole('button',{name:/Legacy final exam/})
+      expect(card).toHaveTextContent('2099-02-15T09:00:00+01:00');expect(card).toHaveTextContent('Verified (legacy record) · On Calendar');expect(card).toHaveTextContent('Newer tentative date: 2099-03-01');expect(card).toHaveTextContent('Reconfirmation needed')
+      expect(card).not.toHaveTextContent('Tentative · not on Calendar')
+      fireEvent.click(card)
+      const inspector=await screen.findByRole('complementary',{name:'Assessment inspector'})
+      expect(inspector).toHaveTextContent('Projected exam date: 2099-02-15T09:00:00+01:00 (Verified (legacy record)) — On Calendar')
+      expect(inspector).toHaveTextContent('Newer tentative proposal: 2099-03-01 (Tentative · unverified) — not on Calendar')
+      expect(inspector.querySelector('.exam-calendar-status [role="note"]')).toHaveTextContent('Previously verified · Reconfirmation needed.')
+      expect(inspector).toHaveTextContent('pending proposal, not on Calendar')
+    })
+    it('warns before saving a tentative exam date when a confirmed date exists, and not for a confirmed save',async()=>{
+      await addLegacy(futureLegacy)
+      render(<MemoryRouter initialEntries={[`/study/courses/${offeringId}/exams?assessment=${LEGACY_ID}`]}><CourseWorkspace offeringId={offeringId} section="exams" onStartTimer={()=>undefined}/></MemoryRouter>)
+      const inspector=await screen.findByRole('complementary',{name:'Assessment inspector'})
+      expect(inspector).toHaveTextContent('This records a tentative proposal only.');expect(inspector).toHaveTextContent('does not replace the confirmed exam date on Calendar (2099-02-15T09:00:00+01:00')
+      const verification=[...inspector.querySelectorAll<HTMLSelectElement>('.milestone-form select')][2];fireEvent.change(verification,{target:{value:'user-confirmed'}})
+      await waitFor(()=>expect(inspector).not.toHaveTextContent('This records a tentative proposal only.'))
+      fireEvent.change(verification,{target:{value:'unverified'}});const date=inspector.querySelector<HTMLInputElement>('.milestone-form input[type=date]')!;fireEvent.change(date,{target:{value:'2099-03-01'}})
+      fireEvent.click(screen.getByRole('button',{name:'Save milestone'}))
+      await waitFor(()=>expect(inspector.querySelector('.exam-calendar-status [role="note"]')).toHaveTextContent('Reconfirmation needed'))
+      expect((await examItems())[0]).toMatchObject({date:'2099-02-15',reviewNeeded:true})
+    })
+    it('Overview agrees with Calendar: confirmed fallback is on Calendar and the tentative date is flagged',async()=>{
+      await addLegacy(futureLegacy);await tentative({localDate:'2099-03-01'})
+      render(<MemoryRouter><CourseWorkspace offeringId={offeringId} section="overview" onStartTimer={()=>undefined}/></MemoryRouter>)
+      expect(await screen.findByRole('heading',{name:'Legacy final exam'})).toBeInTheDocument()
+      expect(screen.getByText('2099-02-15T09:00:00+01:00')).toBeInTheDocument();expect(screen.getByText(/Verified \(legacy\) · on Calendar/)).toBeInTheDocument()
+      expect(screen.getByText(/Newer tentative date: 2099-03-01 — not on Calendar/)).toBeInTheDocument();expect(screen.queryByText(/Tentative · not on Calendar/)).not.toBeInTheDocument()
+    })
+    it('Calendar page shows the reconfirmation warning on the single preserved event without upgrading provenance',async()=>{
+      const now=new Date(),month=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`
+      await addLegacy({officialDateTime:`${month}-28T09:00:00+01:00`});await tentative({localDate:'2099-03-01'})
+      render(<MemoryRouter><GlobalCalendarPage/></MemoryRouter>)
+      const project=await screen.findByRole('combobox',{name:'Calendar project'});await screen.findByRole('option',{name:/System Theory I · Winter 2026\/27/})
+      fireEvent.change(project,{target:{value:offeringId}})
+      expect(await screen.findByText('Legacy final exam')).toBeInTheDocument()
+      const warning=await screen.findByRole('note');expect(warning).toHaveTextContent('Previously verified · Reconfirmation needed');expect(warning).toHaveTextContent('2099-03-01 · date-only · unverified')
+      expect(screen.getAllByText('Legacy final exam')).toHaveLength(1);expect(screen.getByText(/Europe\/Berlin · verified · exact/)).toBeInTheDocument()
+    })
   })
 })
