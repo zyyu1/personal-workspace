@@ -1,0 +1,20 @@
+diff --git a/docs/handoffs/008/STATUS.md b/docs/handoffs/008/STATUS.md
+index 6e2a296..f680192 100644
+--- a/docs/handoffs/008/STATUS.md
++++ b/docs/handoffs/008/STATUS.md
+@@ -66,3 +66,15 @@ All earlier `NOT STARTED / BLOCKED` statements are historical records from befor
+ - Actual checks: TypeScript PASS; Lint PASS with the same 12 pre-existing Research warnings; Build PASS; 11 files / 160 tests PASS; `git diff --check` PASS; browser 1440×900, 1024×768 and 390×844 PASS without horizontal overflow.
+ - The exact final candidate HEAD is published in a PR #18 Review Only request after the documentation commit and is the only independent-QA anchor. Developer self-check is not QA acceptance.
+ - **Current gate:** FRESH INDEPENDENT QA PENDING / MERGE HOLD / NO MODULE 009 OR 010 AUTHORIZATION.
++
++## Module 008 Final Merge Acceptance — MERGED / FINAL CODE ACCEPTED (2026-11-22; CURRENT)
++
++- **Final status:** **MERGED / FINAL CODE ACCEPTED.** This section supersedes the preceding "Current gate" lines only as to current state; all earlier entries, including the original rejection, remain historical record and are not rewritten.
++- **Original independent QA (historical):** candidate `e31502bb346b38c0a559519f97b829da22c963ae` **REJECTED**, 26 PASS / 1 PARTIAL / 3 FAIL — https://github.com/zyyu1/personal-workspace/pull/18#issuecomment-7069366299.
++- **Revision 01 independent QA:** **ACCEPTED**, **30 PASS / 0 PARTIAL / 0 FAIL** (160/160 tests) at exact HEAD `d366710e51f5f4ab1cb6a10cb2919c46549afaed` — https://github.com/zyyu1/personal-workspace/pull/18#issuecomment-7069684532.
++- **Authority chain:** `MODULE_008_MERGE_AUTHORIZATION.md` → `MODULE_008_OPERATOR_HANDOFF_CLAUDE.md` → `MODULE_008_CLOUD_EXECUTION_AUTHORIZATION.md` (one-time GitHub-only cloud execution; Windows-local worktree was **not** checked and was not required).
++- **Pre-merge gates (re-verified live immediately before merge):** PR #18 OPEN, `merged=false`, `mergeable=true`, `mergeable_state=clean`, head exactly `d366710e51f5f4ab1cb6a10cb2919c46549afaed`; merge base `5e2849ec4e4ba0147ab8ab5051d442717171ec19`; Module 007 merge `cd2c7145b2a27a7b7e2815b9ad4eea53a6416b08` in main ancestry; main-only commits since merge base touched only the four `docs/handoffs/008/` authorization/handoff records (no STATUS.md change); clean cloud clone. No new PR commits after the accepted QA anchor.
++- **Merge:** one ordinary non-force Merge Commit via GitHub REST `PUT /pulls/18/merge` with `merge_method=merge` and server-enforced `sha=d366710e51f5f4ab1cb6a10cb2919c46549afaed`.
++- **Actual merge commit:** `48558a862b299b030fbd680aa9677115c92ca773` (parents `5296bbe5aefc47756b880e1d6ad8fcb1dd3e8d30` main, `d366710e51f5f4ab1cb6a10cb2919c46549afaed` accepted head); `merged_at` **2026-11-22T16:13:46Z**; PR #18 state `closed`, `merged=true`.
++- **Post-merge verification:** accepted head is an ancestor of main; tree diff from accepted head to merged main consists solely of the four main-only `docs/handoffs/008/` records (additions only) — no conflict resolution, source, test or dependency change was introduced by the merge.
++- **Not claimed:** no broader Windows native-file capability, cloud sync, automatic grading, or any Module 009/010 functionality. No Module 009/010, B2B (paused), B3, real Codex Queue, scheduler, watcher, service or unattended dispatch was started.

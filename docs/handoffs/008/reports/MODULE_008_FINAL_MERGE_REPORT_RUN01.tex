@@ -1,0 +1,144 @@
+% Module 008 Final Merge Report -- Run 01
+% Producer: Claude Code Cloud Execution Window
+% Consumer: Main (Design) Window
+% Branch: module-008-run-reports (NOT main)
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{fancyvrb}
+
+\newcommand{\sha}[1]{\texttt{\small #1}}
+\newcommand{\PASS}{\textcolor{green!50!black}{\textbf{PASS}}}
+\newcommand{\FAIL}{\textcolor{red!70!black}{\textbf{FAIL}}}
+\newcommand{\STOP}{\textcolor{red!70!black}{\textbf{STOP}}}
+\newcommand{\NOTDONE}{\textcolor{orange!80!black}{\textbf{NOT DONE}}}
+
+\title{Personal Workspace --- Module 008\\Final Merge Report (Run 01)}
+\author{Claude Code Cloud Execution Window}
+\date{2026-11-22 (Europe/Berlin)}
+
+\begin{document}
+\maketitle
+
+\section*{Summary}
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+Run outcome & \textbf{MERGED} --- closeout \STOP{} at STATUS update \\
+Repository & \texttt{zyyu1/personal-workspace} \\
+PR & \href{https://github.com/zyyu1/personal-workspace/pull/18}{\#18} (\texttt{codex/module-008}) --- closed, merged \\
+Issue & \href{https://github.com/zyyu1/personal-workspace/issues/17}{\#17} --- \textbf{still OPEN} \\
+Accepted head & \sha{d366710e51f5f4ab1cb6a10cb2919c46549afaed} \\
+Merge commit & \sha{48558a862b299b030fbd680aa9677115c92ca773} \\
+merged\_at & \texttt{2026-11-22T16:13:46Z} \\
+Main HEAD at report & \sha{48558a862b299b030fbd680aa9677115c92ca773} \\
+Awaiting & Design Window decision on STATUS write path (Section~\ref{sec:decision}) \\
+\bottomrule
+\end{tabularx}
+
+\section{Authority chain}
+\begin{enumerate}[nosep]
+  \item \texttt{MODULE\_008\_MERGE\_AUTHORIZATION.md} (main \sha{e6cdf81}).
+  \item \texttt{MODULE\_008\_OPERATOR\_HANDOFF\_CLAUDE.md} (main \sha{2adb8c9}).
+  \item \texttt{MODULE\_008\_CLOUD\_EXECUTION\_AUTHORIZATION.md} (main \sha{5296bbe}) --- one-time GitHub-only cloud execution; Windows-local worktree \emph{not} checked and not required.
+  \item Independent QA, original: \href{https://github.com/zyyu1/personal-workspace/pull/18\#issuecomment-7069366299}{REJECTED, 26/1/3} at \sha{e31502b}.
+  \item Independent QA, Revision 01: \href{https://github.com/zyyu1/personal-workspace/pull/18\#issuecomment-7069684532}{ACCEPTED, 30 PASS / 0 PARTIAL / 0 FAIL} at \sha{d366710}.
+\end{enumerate}
+
+\section{Pre-merge gates (re-verified live immediately before merge)}
+\begin{tabularx}{\textwidth}{@{}Xl@{}}
+\toprule
+Gate & Result \\
+\midrule
+Cloud clone clean, origin = \texttt{zyyu1/personal-workspace} & \PASS \\
+PR \#18 \texttt{state=open}, \texttt{merged=false} & \PASS \\
+\texttt{mergeable=true}, \texttt{mergeable\_state=clean} & \PASS \\
+API \texttt{head.sha} and \texttt{refs/pull/18/head} $=$ \sha{d366710e\ldots} & \PASS \\
+No PR commits after QA anchor (5 commits, last = \sha{d366710}) & \PASS \\
+Merge base $=$ \sha{5e2849e} & \PASS \\
+Module 007 merge \sha{cd2c714} in main ancestry & \PASS \\
+Main-only commits touch only 4 \texttt{docs/handoffs/008/} records, not \texttt{STATUS.md} & \PASS \\
+CI checks / statuses & none configured \\
+Branch protection & unreadable (HTTP 403, plan limit) --- not bypassed \\
+\bottomrule
+\end{tabularx}
+
+\section{Merge execution}
+\begin{itemize}[nosep]
+  \item Call: \texttt{PUT /repos/zyyu1/personal-workspace/pulls/18/merge}, \texttt{merge\_method=merge}, \texttt{sha=d366710e\ldots} (server-enforced).
+  \item Attempt 1: HTTP 415 from the local session proxy (missing \texttt{Content-Type} header); request never reached GitHub. PR state re-read unchanged (open, unmerged, clean, same head).
+  \item Attempt 2 (corrected header): HTTP 200, \texttt{merged=true}, \sha{48558a862b299b030fbd680aa9677115c92ca773}.
+\end{itemize}
+
+\section{Post-merge verification}
+\begin{tabularx}{\textwidth}{@{}Xl@{}}
+\toprule
+Check & Result \\
+\midrule
+PR re-read: \texttt{closed}, \texttt{merged=true}, \texttt{merged\_at=2026-11-22T16:13:46Z} & \PASS \\
+Merge commit parents: \sha{5296bbe} (main), \sha{d366710} (accepted head) & \PASS \\
+\texttt{refs/heads/main} $=$ \sha{48558a8} & \PASS \\
+Accepted head is ancestor of main (compare: behind 0) & \PASS \\
+Tree diff accepted head $\to$ main $=$ only 4 main-only docs, additions only & \PASS \\
+Merge brought exactly PR diff: 17 files, $+570/-25$ & \PASS \\
+No conflict resolution, source/test/dependency change introduced & \PASS \\
+\bottomrule
+\end{tabularx}
+
+\section{Closeout status}
+\begin{tabularx}{\textwidth}{@{}Xl@{}}
+\toprule
+Step & Status \\
+\midrule
+Append final section to \texttt{docs/handoffs/008/STATUS.md} & \FAIL{} $\to$ \STOP \\
+Closeout comment on PR \#18 & \NOTDONE \\
+Closeout comment on Issue \#17 & \NOTDONE \\
+Close Issue \#17 & \NOTDONE \\
+\bottomrule
+\end{tabularx}
+
+\paragraph{Failure detail.} \texttt{PUT /contents/docs/handoffs/008/STATUS.md} with precondition blob \sha{6e2a2963091324629f6cc81064dc17ddad1ae3ac} returned \textbf{HTTP 403}: \emph{``Write access to this GitHub API path is not permitted through this proxy.''} This is a session-proxy restriction, not a repository-permission or content conflict. Nothing was written to \texttt{STATUS.md}. Per the authorization (``If STATUS update \ldots\ fails, STOP and report''), no alternative write path was attempted for STATUS, and Issue \#17 was not closed.
+
+\paragraph{Note on this report.} This report itself is pushed with an ordinary \texttt{git push} to the separate branch \texttt{module-008-run-reports}, at the user's explicit instruction to return each run's results to the main window via GitHub. \texttt{main} was not touched by this push.
+
+\section{Decision requested from Design Window}\label{sec:decision}
+\begin{enumerate}
+  \item \textbf{Option A:} authorize an ordinary fast-forward \texttt{git push} of the prepared STATUS section to \texttt{main} (no force; push is rejected automatically if main moved from \sha{48558a8}). Then post PR \#18 / Issue \#17 closeout and close Issue \#17. Comment endpoints may also be proxy-blocked; that would be reported.
+  \item \textbf{Option B:} user / Windows window applies the patch in Appendix~\ref{app:patch} manually, posts closeout, closes Issue \#17.
+\end{enumerate}
+
+\section{Scope confirmation}
+No Module 009/010, B2B (paused), B3, real Codex Queue, scheduler, watcher, service, daemon or unattended dispatch was started. No source, test or dependency edits. No force-push, reset or rebase on any shared branch.
+
+\appendix
+\section{Prepared STATUS.md addition (not yet applied)}\label{app:patch}
+Append to the end of \texttt{docs/handoffs/008/STATUS.md} on main (12 added lines, 0 deleted):
+\begin{Verbatim}[fontsize=\scriptsize]
+## Module 008 Final Merge Acceptance — MERGED / FINAL CODE ACCEPTED (2026-11-22; CURRENT)
+
+- Final status: MERGED / FINAL CODE ACCEPTED. Supersedes preceding "Current gate"
+  lines only as to current state; earlier entries remain historical record.
+- Original independent QA (historical): e31502b REJECTED, 26 PASS / 1 PARTIAL / 3 FAIL
+  -- pull/18#issuecomment-7069366299
+- Revision 01 independent QA: ACCEPTED, 30 PASS / 0 PARTIAL / 0 FAIL (160/160 tests)
+  at d366710e51f5f4ab1cb6a10cb2919c46549afaed -- pull/18#issuecomment-7069684532
+- Authority chain: MERGE_AUTHORIZATION -> OPERATOR_HANDOFF_CLAUDE ->
+  CLOUD_EXECUTION_AUTHORIZATION (Windows-local worktree not checked, not required)
+- Pre-merge gates re-verified live (open, unmerged, clean, exact head, base 5e2849e,
+  007 merge cd2c714 in ancestry, main-only docs only, clean cloud clone)
+- Merge: ordinary Merge Commit, PUT /pulls/18/merge, merge_method=merge,
+  sha=d366710e51f5f4ab1cb6a10cb2919c46549afaed
+- Actual merge commit: 48558a862b299b030fbd680aa9677115c92ca773
+  (parents 5296bbe main, d366710 accepted head); merged_at 2026-11-22T16:13:46Z
+- Post-merge: accepted head ancestor of main; head->main diff = 4 main-only docs only
+- Not claimed / not started: Module 009/010, B2B, B3, Codex Queue, services
+\end{Verbatim}
+The exact Markdown text (full-length lines, with links) is in
+\texttt{MODULE\_008\_STATUS\_final\_section\_RUN01.patch} in this same reports folder.
+
+\end{document}
