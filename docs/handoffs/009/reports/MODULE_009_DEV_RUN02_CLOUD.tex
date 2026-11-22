@@ -1,0 +1,91 @@
+% Module 009 Cloud Development Run -- report to Design Window
+% Branch: module-009-run-reports (evidence only; NOT main, NOT codex/module-009)
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.1cm]{geometry}
+\usepackage{booktabs,tabularx,hyperref,xcolor,enumitem}
+\newcommand{\sha}[1]{\texttt{\small #1}}
+\newcommand{\PASS}{\textcolor{green!50!black}{\textbf{PASS}}}
+\newcommand{\FAIL}{\textcolor{red!70!black}{\textbf{FAIL}}}
+\newcommand{\STOP}{\textcolor{red!70!black}{\textbf{STOP}}}
+
+\title{Module 009 --- Cloud Development Run Report\\Authority Conflict STOP (Run 02-cloud)}
+\author{Claude Code Cloud Development / Execution Window}
+\date{2026-11-22 (Europe/Berlin)}
+
+\begin{document}
+\maketitle
+
+\section*{Summary}
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+Outcome & \STOP{} --- implementation complete on \texttt{codex/module-009} with green CI, \textbf{but} a Design Window disposition published during the run reassigns implementation to local Windows, and PR \#20 now conflicts with \texttt{main} \\
+PR & \href{https://github.com/zyyu1/personal-workspace/pull/20}{\#20} --- OPEN, \textbf{DRAFT}, \texttt{mergeable\_state=dirty} \\
+Branch head & \sha{845c82513f4ff233035d572146423eeed9eec7f4} \\
+Last CI-verified head & \sha{ed1c4095c0b9b6990da02d6fc0164decb7b03307} (run 45047487262, all steps pass); \sha{845c825} adds docs only and got no CI run because the PR is conflicting \\
+Main now & \sha{843dca26cc6d41216dca9caee3d219db3e01e943} \\
+Not done & conflict resolution, PR ready-for-review, PR/Issue handoff comments, any merge \\
+\bottomrule
+\end{tabularx}
+
+\section{Timeline and the authority conflict}
+\begin{enumerate}[nosep]
+  \item 16:45Z: Run01 cloud preflight STOP reported (environment).
+  \item 16:46Z: User relayed ``Module 009 CI permission APPROVED'' and instructed: \emph{after CI is configured, continue Module 009 development, submit PR and QA\_HANDOFF, wait for independent QA}. Basis: \texttt{MODULE\_009\_CI\_PERMISSION\_APPROVAL.md} on main (\sha{34d9b5e}, \sha{b6140bd}).
+  \item 16:47--16:48Z (published while this window was working): \texttt{MODULE\_009\_PREFLIGHT\_RUN01\_DISPOSITION.md} (\sha{f01d873}) and addenda (\sha{9c9fa3a}, \sha{4096a68}, \sha{843dca2}): \emph{cloud session stays STOPPED for implementation}; local Windows Run02 required; PR \#20 observed as CI-only at \sha{d131025}; ``if any operator is actively changing PR \#20 \ldots STOP on unexpected state''.
+  \item This window noticed the disposition only when checking the final PR state. It then stopped all further GitHub writes to PR \#20 and main.
+\end{enumerate}
+\textbf{The two instructions conflict.} This window acted on the user's 16:46Z instruction. The later formal disposition was not seen until the end of the run. Design Window must decide how to treat the work below.
+
+\section{What was done on \texttt{codex/module-009} (PR \#20, Draft)}
+\begin{tabularx}{\textwidth}{@{}lX@{}}
+\toprule
+Commit & Content \\
+\midrule
+\sha{d131025} & scoped CI workflow (seen by Design Window) \\
+\sha{7a20b48} & CI Node 22/24 diagnostic matrix \\
+\sha{f53fa04} & Module 009 implementation (schema v3, dates/DST, exam service, calendar, resume, Exams UI) \\
+\sha{ecae008} & 26 new tests (\texttt{StudyExams.test.tsx}) \\
+\sha{bcdb26d}, \sha{ed1c409} & CI browser smoke (cloud Chrome via DevTools protocol, no dependency) \\
+\sha{845c825} & \texttt{QA\_HANDOFF.md} + appended branch STATUS section \\
+\bottomrule
+\end{tabularx}
+17 files, $+1188/-20$; no \texttt{package.json}/lockfile change; no dependency added (platform \texttt{Intl} instead of \texttt{@js-temporal/polyfill}).
+
+\section{Evidence (CI run 45047487262, head \sha{ed1c409})}
+\begin{tabularx}{\textwidth}{@{}Xl@{}}
+\toprule
+Gate & Result \\
+\midrule
+\texttt{npm ci} (committed lockfile) & \PASS \\
+\texttt{npm run typecheck} & \PASS \\
+\texttt{npm run lint} & \PASS{} --- 0 errors, 12 warnings (all pre-existing Research) \\
+\texttt{npm run build} & \PASS \\
+\texttt{npm test -- --run} & \PASS{} --- 12 files, 186/186 (160 baseline + 26 new) \\
+\texttt{git diff --check origin/main...HEAD} & \PASS \\
+Cloud Chrome 1440/1024/390: no overflow, create$\to$inspector$\to$Escape focus, deep-link reload, DST gap rejected in UI, 1 calendar event per exam & \PASS{} (17 checks, 0 failures) \\
+Console errors & 0 (default \texttt{/favicon.ico} 404 reported separately) \\
+\bottomrule
+\end{tabularx}
+
+\paragraph{CI runtime note.} Baseline \texttt{main} fails 3 pre-existing ZIP manifest tests on Node 22 (jsdom File/Blob), passes 160/160 on Node 24 (diagnostic run 45045970624). CI is pinned to Node 24; no app code changed for this.
+
+\paragraph{Developer self-check} (in \texttt{QA\_HANDOFF.md}): 29 PASS / 1 PARTIAL (row 29: browser evidence is cloud Linux Chrome only; permission-required state not exercised in browser; no Windows host). This is developer evidence, not independent QA.
+
+\paragraph{Scope questions for Design Window.} (a) The browser-smoke CI step was added as ``check the existing application''; it adds no permission or dependency but is beyond the five listed commands. (b) Legacy 007 projection is replaced once an assessment has any active \texttt{exam} milestone.
+
+\section{Conflict state of PR \#20}
+Main gained \sha{f01d873}..\sha{843dca2} (docs only: new disposition file; \texttt{STATUS.md} +15 lines). The branch also appended to \texttt{STATUS.md}, so GitHub reports \texttt{dirty}. Resolving it is a simple non-destructive merge keeping both appended sections, but the disposition requires STOP on unexpected PR state, so it was \textbf{not} attempted.
+
+\section{Decision requested}
+\begin{enumerate}
+  \item \textbf{Accept the cloud-built candidate for review:} authorize this window to merge latest \texttt{main} into \texttt{codex/module-009} normally (keep both STATUS sections), re-run CI on the new exact head, publish the PR Review Only request and Issue \#19 link, then STOP for independent QA. Windows-local browser/host QA could be added as an extra QA step.
+  \item \textbf{Keep the disposition:} the local Windows Run02 window inspects the existing branch (now beyond \sha{d131025}) and decides to continue from it or not. This window makes no further change. Nothing will be reset or force-pushed.
+  \item \textbf{Other instruction} (e.g.\ revert specific commits via ordinary revert commits).
+\end{enumerate}
+
+\section{Scope confirmation}
+No merge, no force push, no reset or rebase, no Issue \#19 comment or closure, no QA PASS claim. No Module 010, B2B/B3, Codex Queue, scheduler or service. \texttt{main} untouched by this window.
+
+\end{document}
