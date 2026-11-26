@@ -720,54 +720,88 @@ def attempt_notification(
     now: dt.datetime | None = None,
 ) -> NotifyResult:
     try:
+        with lock:
+            return attempt_notification_locked(
+                notification,
+                config,
+                store,
+                sender,
+                current_user=current_user,
+                now=now,
+            )
+    except B2Error as exc:
+        return NotifyResult(
+            "BLOCKED",
+            exc.code,
+            notification.issue_number,
+            notification.dispatch_id,
+            notification.notification_record_sha,
+        )
+
+
+def attempt_notification_locked(
+    notification: AuthorizedNotification,
+    config: LocalConfig,
+    store: OutboxStore,
+    sender: CodexQueueSender,
+    *,
+    current_user: str | None = None,
+    now: dt.datetime | None = None,
+) -> NotifyResult:
+    """Submit one validated notification while the caller holds the instance lock.
+
+    B2A continues to acquire its own lock through ``attempt_notification``.  The
+    B2B on-demand receiver uses this core only after it has acquired that same
+    lock and freshly re-read the GitHub authorization.
+    """
+    try:
         config.validate_runtime(current_user=current_user)
         current = (now or dt.datetime.now(dt.timezone.utc)).astimezone(dt.timezone.utc)
         if notification.expires_at <= current:
             raise B2Error("NOTIFICATION_EXPIRED")
         message = compose_message(notification)
-        with lock:
-            entry, created = store.prepare(notification)
-            if not created:
-                return NotifyResult(
-                    entry["status"],
-                    "DUPLICATE_SUPPRESSED",
-                    notification.issue_number,
-                    notification.dispatch_id,
-                    notification.notification_record_sha,
-                )
-            try:
-                sender.submit(config, message)
-            except QueueError as exc:
-                try:
-                    store.transition(notification.dedupe_key, "UNKNOWN_DELIVERY", exc.code)
-                except StateError:
-                    pass
-                return NotifyResult(
-                    "UNKNOWN_DELIVERY",
-                    exc.code,
-                    notification.issue_number,
-                    notification.dispatch_id,
-                    notification.notification_record_sha,
-                )
-            try:
-                store.transition(
-                    notification.dedupe_key, "QUEUE_SUBMITTED", "QUEUE_EXIT_ZERO"
-                )
-            except StateError:
-                return NotifyResult(
-                    "UNKNOWN_DELIVERY",
-                    "STATE_COMMIT_FAILED_AFTER_QUEUE",
-                    notification.issue_number,
-                    notification.dispatch_id,
-                    notification.notification_record_sha,
-                )
+        entry, created = store.prepare(notification)
+        if not created:
             return NotifyResult(
-                "QUEUE_SUBMITTED",
-                "QUEUE_EXIT_ZERO_NOT_ACK",
+                entry["status"],
+                "DUPLICATE_SUPPRESSED",
                 notification.issue_number,
                 notification.dispatch_id,
                 notification.notification_record_sha,
             )
+        try:
+            sender.submit(config, message)
+        except QueueError as exc:
+            try:
+                store.transition(notification.dedupe_key, "UNKNOWN_DELIVERY", exc.code)
+            except StateError:
+                pass
+            return NotifyResult(
+                "UNKNOWN_DELIVERY",
+                exc.code,
+                notification.issue_number,
+                notification.dispatch_id,
+                notification.notification_record_sha,
+            )
+        try:
+            store.transition(
+                notification.dedupe_key, "QUEUE_SUBMITTED", "QUEUE_EXIT_ZERO"
+            )
+        except StateError:
+            return NotifyResult(
+                "UNKNOWN_DELIVERY",
+                "STATE_COMMIT_FAILED_AFTER_QUEUE",
+                notification.issue_number,
+                notification.dispatch_id,
+                notification.notification_record_sha,
+            )
+        return NotifyResult(
+            "QUEUE_SUBMITTED",
+            "QUEUE_EXIT_ZERO_NOT_ACK",
+            notification.issue_number,
+            notification.dispatch_id,
+            notification.notification_record_sha,
+        )
     except B2Error as exc:
         return NotifyResult(
             "BLOCKED",
